@@ -1,0 +1,117 @@
+from typing import List, Optional
+from fastapi import APIRouter, Depends, HTTPException, status, Query
+from sqlalchemy.orm import Session
+from app.database import get_db
+from app.models.user import User, Institution, Department
+from app.models.profile import StudentProfile, FacultyProfile
+from app.schemas.user import UserResponse, InstitutionResponse, InstitutionCreate, DepartmentResponse, DepartmentCreate, UserApprovalUpdate
+from app.core.deps import get_current_user, require_role
+from app.core.audit import log_audit
+from app.services.notification import send_notification
+
+router = APIRouter(prefix="/users", tags=["Users & Organizations"])
+
+@router.get("", response_model=List[UserResponse])
+def get_users(
+    role: Optional[str] = None,
+    is_approved: Optional[bool] = None,
+    institution_id: Optional[int] = None,
+    current_user: User = Depends(require_role(["admin", "institution"])),
+    db: Session = Depends(get_db)
+):
+    query = db.query(User)
+    
+    # Institution ABAC restriction: Institution can only view users in their institution
+    if current_user.role == "institution":
+        if not current_user.institution_id:
+            return []
+        query = query.filter(User.institution_id == current_user.institution_id)
+    elif institution_id:
+        query = query.filter(User.institution_id == institution_id)
+        
+    if role:
+        query = query.filter(User.role == role)
+    if is_approved is not None:
+        query = query.filter(User.is_approved == is_approved)
+        
+    return query.order_by(User.created_at.desc()).all()
+
+@router.put("/{user_id}/approval", response_model=UserResponse)
+def update_user_approval(
+    user_id: int,
+    data: UserApprovalUpdate,
+    current_user: User = Depends(require_role(["admin"])),
+    db: Session = Depends(get_db)
+):
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+        
+    user.is_approved = data.is_approved
+    if data.is_active is not None:
+        user.is_active = data.is_active
+        
+    db.commit()
+    db.refresh(user)
+    
+    status_str = "approved" if user.is_approved else "rejected/pending"
+    send_notification(
+        db=db,
+        user_id=user.id,
+        title=f"Account Registration {status_str.capitalize()}",
+        message=f"Your account registration has been {status_str} by the platform administrator.",
+        notification_type="approval"
+    )
+    
+    log_audit(
+        db=db,
+        action="APPROVE_USER" if user.is_approved else "REJECT_USER",
+        user_id=current_user.id,
+        resource_type="USER",
+        resource_id=str(user.id),
+        details={"approved": user.is_approved}
+    )
+    
+    return user
+
+@router.get("/institutions", response_model=List[InstitutionResponse])
+def get_institutions(db: Session = Depends(get_db)):
+    return db.query(Institution).all()
+
+@router.post("/institutions", response_model=InstitutionResponse, status_code=status.HTTP_201_CREATED)
+def create_institution(
+    data: InstitutionCreate,
+    current_user: User = Depends(require_role(["admin"])),
+    db: Session = Depends(get_db)
+):
+    existing = db.query(Institution).filter(
+        (Institution.name == data.name) | (Institution.code == data.code)
+    ).first()
+    if existing:
+        raise HTTPException(status_code=400, detail="Institution name or code already exists")
+        
+    inst = Institution(**data.dict())
+    db.add(inst)
+    db.commit()
+    db.refresh(inst)
+    return inst
+
+@router.get("/institutions/{institution_id}/departments", response_model=List[DepartmentResponse])
+def get_departments(institution_id: int, db: Session = Depends(get_db)):
+    return db.query(Department).filter(Department.institution_id == institution_id).all()
+
+@router.post("/institutions/{institution_id}/departments", response_model=DepartmentResponse, status_code=status.HTTP_201_CREATED)
+def create_department(
+    institution_id: int,
+    data: DepartmentCreate,
+    current_user: User = Depends(require_role(["admin", "institution"])),
+    db: Session = Depends(get_db)
+):
+    if current_user.role == "institution" and current_user.institution_id != institution_id:
+        raise HTTPException(status_code=403, detail="Cannot manage departments of another institution")
+        
+    dept = Department(institution_id=institution_id, name=data.name, code=data.code)
+    db.add(dept)
+    db.commit()
+    db.refresh(dept)
+    return dept

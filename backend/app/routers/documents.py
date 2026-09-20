@@ -1,0 +1,171 @@
+import os
+import shutil
+from typing import List, Optional
+from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Form
+from sqlalchemy.orm import Session
+from app.config import settings
+from app.database import get_db
+from app.models.user import User
+from app.models.profile import StudentProfile
+from app.models.document import Document, DocumentVerification
+from app.schemas.document import DocumentResponse, DocumentVerificationCreate, DocumentVerificationResponse
+from app.core.deps import get_current_user, require_role
+from app.core.audit import log_audit
+from app.services.notification import send_notification
+
+router = APIRouter(prefix="/documents", tags=["Document Management & Verification"])
+
+ALLOWED_EXTENSIONS = {".pdf", ".png", ".jpg", ".jpeg", ".doc", ".docx"}
+MAX_FILE_SIZE = 10 * 1024 * 1024  # 10 MB
+
+@router.post("/upload", response_model=DocumentResponse, status_code=status.HTTP_201_CREATED)
+async def upload_document(
+    title: str = Form(...),
+    document_type: str = Form(...),
+    file: UploadFile = File(...),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    ext = os.path.splitext(file.filename)[1].lower()
+    if ext not in ALLOWED_EXTENSIONS:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"File extension {ext} not allowed. Supported: {', '.join(ALLOWED_EXTENSIONS)}"
+        )
+        
+    safe_filename = f"user_{current_user.id}_{int(os.times().system)}_{file.filename.replace(' ', '_')}"
+    file_path = os.path.join(settings.UPLOAD_DIR, safe_filename)
+    
+    # Save file to disk
+    with open(file_path, "wb") as buffer:
+        shutil.copyfileobj(file.file, buffer)
+        
+    file_size = os.path.getsize(file_path)
+    if file_size > MAX_FILE_SIZE:
+        os.remove(file_path)
+        raise HTTPException(status_code=400, detail="File size exceeds maximum permitted 10MB")
+        
+    doc = Document(
+        owner_user_id=current_user.id,
+        title=title,
+        document_type=document_type,
+        file_path=f"/uploads/{safe_filename}",
+        file_size=file_size,
+        mime_type=file.content_type or "application/octet-stream"
+    )
+    db.add(doc)
+    db.commit()
+    db.refresh(doc)
+    
+    # Auto-link to student profile if resume
+    if document_type == "resume" and current_user.role == "student":
+        student = db.query(StudentProfile).filter(StudentProfile.user_id == current_user.id).first()
+        if student:
+            student.resume_url = doc.file_path
+            db.commit()
+            
+    log_audit(
+        db=db,
+        action="UPLOAD_DOCUMENT",
+        user_id=current_user.id,
+        resource_type="DOCUMENT",
+        resource_id=str(doc.id),
+        details={"filename": file.filename, "type": document_type}
+    )
+    
+    return {
+        "id": doc.id,
+        "owner_user_id": doc.owner_user_id,
+        "title": doc.title,
+        "document_type": doc.document_type,
+        "file_path": doc.file_path,
+        "file_size": doc.file_size,
+        "mime_type": doc.mime_type,
+        "uploaded_at": doc.uploaded_at,
+        "verification_status": "pending",
+        "verification_remarks": None,
+        "owner_name": current_user.username
+    }
+
+@router.get("", response_model=List[DocumentResponse])
+def get_documents(
+    document_type: Optional[str] = None,
+    verification_status: Optional[str] = None,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    query = db.query(Document)
+    
+    if current_user.role == "student":
+        query = query.filter(Document.owner_user_id == current_user.id)
+    elif current_user.role == "institution":
+        # Only students/faculty in their institution
+        user_ids = [u.id for u in db.query(User.id).filter(User.institution_id == current_user.institution_id).all()]
+        query = query.filter(Document.owner_user_id.in_(user_ids))
+        
+    if document_type:
+        query = query.filter(Document.document_type == document_type)
+        
+    docs = query.order_by(Document.uploaded_at.desc()).all()
+    results = []
+    for d in docs:
+        latest_ver = db.query(DocumentVerification).filter(DocumentVerification.document_id == d.id).order_by(DocumentVerification.verified_at.desc()).first()
+        v_status = latest_ver.verification_status if latest_ver else "pending"
+        v_remarks = latest_ver.remarks if latest_ver else None
+        
+        if verification_status and v_status != verification_status:
+            continue
+            
+        results.append({
+            "id": d.id,
+            "owner_user_id": d.owner_user_id,
+            "title": d.title,
+            "document_type": d.document_type,
+            "file_path": d.file_path,
+            "file_size": d.file_size,
+            "mime_type": d.mime_type,
+            "uploaded_at": d.uploaded_at,
+            "verification_status": v_status,
+            "verification_remarks": v_remarks,
+            "owner_name": d.owner.username if d.owner else "User"
+        })
+    return results
+
+@router.post("/verify", response_model=DocumentVerificationResponse)
+def verify_document(
+    data: DocumentVerificationCreate,
+    current_user: User = Depends(require_role(["institution", "admin"])),
+    db: Session = Depends(get_db)
+):
+    doc = db.query(Document).filter(Document.id == data.document_id).first()
+    if not doc:
+        raise HTTPException(status_code=404, detail="Document not found")
+        
+    ver = DocumentVerification(
+        document_id=data.document_id,
+        verified_by_user_id=current_user.id,
+        verification_status=data.verification_status,
+        remarks=data.remarks
+    )
+    db.add(ver)
+    db.commit()
+    db.refresh(ver)
+    
+    send_notification(
+        db=db,
+        user_id=doc.owner_user_id,
+        title=f"Document Verification: {data.verification_status.capitalize()}",
+        message=f"Your document '{doc.title}' has been {data.verification_status}. Remarks: {data.remarks or 'None'}.",
+        notification_type="system"
+    )
+    
+    log_audit(
+        db=db,
+        action="VERIFY_DOCUMENT",
+        user_id=current_user.id,
+        resource_type="DOCUMENT",
+        resource_id=str(doc.id),
+        details={"status": data.verification_status}
+    )
+    
+    return ver
