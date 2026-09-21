@@ -114,20 +114,6 @@ export function StudentSkillsPage() {
             <h3 className="card-title">Add / Update Skill</h3>
           </div>
 
-          {msg && (
-            <div style={{
-              backgroundColor: '#DEF7EC',
-              border: '1px solid #86EFAC',
-              borderRadius: '4px',
-              padding: '8px 12px',
-              color: '#166534',
-              fontSize: '12.5px',
-              marginBottom: '14px'
-            }}>
-              {msg}
-            </div>
-          )}
-
           <form onSubmit={handleAddSkill}>
             <div className="form-group">
               <label className="form-label">Select Skill from Catalog *</label>
