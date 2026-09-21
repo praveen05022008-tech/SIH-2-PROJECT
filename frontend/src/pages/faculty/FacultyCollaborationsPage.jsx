@@ -1,9 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../../services/api';
 import { PortalLayout } from '../../components/layout/PortalLayout';
+import { useToast } from '../../context/ToastContext';
 import { Building2, Plus, Send } from 'lucide-react';
+import { LoadingSpinner } from '../../components/common/LoadingSpinner';
 
 export function FacultyCollaborationsPage() {
+  const toast = useToast();
   const [collaborations, setCollaborations] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
@@ -39,9 +42,10 @@ export function FacultyCollaborationsPage() {
       setTitle('');
       setDesc('');
       setTerms('');
+      toast.success('Collaboration proposal submitted successfully.');
       fetchCollaborations();
     } catch (err) {
-      alert('Error: ' + err.message);
+      toast.error('Error submitting proposal: ' + err.message);
     } finally {
       setSubmitting(false);
     }
@@ -61,7 +65,7 @@ export function FacultyCollaborationsPage() {
         </div>
 
         {loading ? (
-          <p className="text-muted">Loading collaboration proposals...</p>
+          <LoadingSpinner message="Loading collaboration proposals..." />
         ) : collaborations.length === 0 ? (
           <p className="text-muted" style={{ padding: '24px 0' }}>No collaboration proposals recorded yet.</p>
         ) : (

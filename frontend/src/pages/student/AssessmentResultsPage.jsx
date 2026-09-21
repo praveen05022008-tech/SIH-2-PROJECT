@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../../services/api';
 import { PortalLayout } from '../../components/layout/PortalLayout';
+import { LoadingSpinner } from '../../components/common/LoadingSpinner';
 import { Award, CheckCircle, XCircle } from 'lucide-react';
 
 export function AssessmentResultsPage() {
@@ -85,7 +86,7 @@ export function AssessmentResultsPage() {
         </div>
 
         {loading ? (
-          <p className="text-muted">Loading completed assessments...</p>
+          <LoadingSpinner message="Loading completed assessments..." />
         ) : results.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '32px 0' }}>
             <Award size={36} color="#94A3B8" style={{ margin: '0 auto 12px' }} />

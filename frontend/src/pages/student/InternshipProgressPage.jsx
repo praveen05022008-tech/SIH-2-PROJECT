@@ -1,9 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../../services/api';
 import { PortalLayout } from '../../components/layout/PortalLayout';
+import { useToast } from '../../context/ToastContext';
+import { LoadingSpinner } from '../../components/common/LoadingSpinner';
 import { GraduationCap, CheckCircle, Clock, Upload, Send } from 'lucide-react';
 
 export function InternshipProgressPage() {
+  const toast = useToast();
   const [internships, setInternships] = useState([]);
   const [loading, setLoading] = useState(true);
   
@@ -34,13 +37,13 @@ export function InternshipProgressPage() {
         submission_url: submissionUrl,
         submission_notes: submissionNotes,
       });
-      alert('Task submission sent to mentor.');
+      toast.success('Task submission sent to mentor successfully.');
       setSelectedTask(null);
       setSubmissionUrl('');
       setSubmissionNotes('');
       fetchInternships();
     } catch (err) {
-      alert('Submission failed: ' + err.message);
+      toast.error('Submission failed: ' + err.message);
     } finally {
       setSubmitting(false);
     }
@@ -49,7 +52,9 @@ export function InternshipProgressPage() {
   return (
     <PortalLayout title="Internship Progress & Tasks" allowedRoles={['student']}>
       {loading ? (
-        <p className="text-muted">Loading internship records...</p>
+        <div className="card" style={{ padding: '36px', display: 'flex', justifyContent: 'center' }}>
+          <LoadingSpinner message="Loading internship records..." />
+        </div>
       ) : internships.length === 0 ? (
         <div className="card" style={{ textAlign: 'center', padding: '40px' }}>
           <GraduationCap size={40} color="#94A3B8" style={{ margin: '0 auto 12px' }} />

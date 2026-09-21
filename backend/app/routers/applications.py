@@ -194,13 +194,42 @@ def update_application_status(
         link_url="/student/applications"
     )
     
-    log_audit(
-        db=db,
-        action="UPDATE_APPLICATION_STATUS",
-        user_id=current_user.id,
-        resource_type="APPLICATION",
-        resource_id=str(app_record.id),
-        details={"new_status": data.status}
-    )
-    
-    return app_record
+    applicant = app_record.applicant
+    applicant_info = None
+    if applicant and applicant.student_profile:
+        sp = applicant.student_profile
+        applicant_info = {
+            "user_id": applicant.id,
+            "full_name": sp.full_name,
+            "email": applicant.email,
+            "course": sp.course,
+            "cgpa": sp.cgpa,
+            "institution_name": sp.institution.name if sp.institution else None,
+            "department_name": sp.department.name if sp.department else None
+        }
+    elif applicant:
+        applicant_info = {
+            "user_id": applicant.id,
+            "full_name": applicant.username,
+            "email": applicant.email,
+            "course": None,
+            "cgpa": None,
+            "institution_name": None,
+            "department_name": None
+        }
+        
+    return {
+        "id": app_record.id,
+        "opportunity_id": app_record.opportunity_id,
+        "applicant_user_id": app_record.applicant_user_id,
+        "applicant_role": app_record.applicant_role,
+        "status": app_record.status,
+        "resume_url": app_record.resume_url,
+        "cover_note": app_record.cover_note,
+        "reviewer_notes": app_record.reviewer_notes,
+        "match_score": app_record.match_score,
+        "applied_at": app_record.applied_at,
+        "updated_at": app_record.updated_at,
+        "opportunity": opp,
+        "applicant": applicant_info
+    }

@@ -1,9 +1,13 @@
 import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { api } from '../../services/api';
 import { PortalLayout } from '../../components/layout/PortalLayout';
+import { useToast } from '../../context/ToastContext';
+import { LoadingSpinner } from '../../components/common/LoadingSpinner';
 import { Briefcase, Building, MapPin, Send, Check } from 'lucide-react';
 
 export function FacultyOpportunitiesPage() {
+  const toast = useToast();
   const [opportunities, setOpportunities] = useState([]);
   const [loading, setLoading] = useState(true);
   const [appliedIds, setAppliedIds] = useState(new Set());
@@ -38,6 +42,15 @@ export function FacultyOpportunitiesPage() {
       .catch(() => {});
   };
 
+  const handleOpenModal = (opp) => {
+    if (appliedIds.has(opp.id)) {
+      toast.info(`You have already applied for ${opp.title}.`);
+      return;
+    }
+    setSelectedOpp(opp);
+    setCoverNote('');
+  };
+
   const handleApply = async (e) => {
     e.preventDefault();
     if (!selectedOpp) return;
@@ -49,9 +62,17 @@ export function FacultyOpportunitiesPage() {
       });
       setAppliedIds((prev) => new Set([...prev, selectedOpp.id]));
       setSelectedOpp(null);
-      alert('Application submitted.');
+      setCoverNote('');
+      toast.success('Application submitted successfully.');
     } catch (err) {
-      alert('Error: ' + err.message);
+      const msg = err.message || 'Failed to submit application.';
+      if (msg.toLowerCase().includes('already submitted') || msg.toLowerCase().includes('already applied')) {
+        setAppliedIds((prev) => new Set([...prev, selectedOpp.id]));
+        toast.warning('You have already applied for this opening.');
+        setSelectedOpp(null);
+      } else {
+        toast.error(msg);
+      }
     } finally {
       setSubmitting(false);
     }
@@ -66,7 +87,7 @@ export function FacultyOpportunitiesPage() {
         </div>
 
         {loading ? (
-          <p className="text-muted">Loading opportunities...</p>
+          <LoadingSpinner message="Loading faculty opportunities..." />
         ) : opportunities.length === 0 ? (
           <p className="text-muted" style={{ padding: '20px 0' }}>No industry opportunities currently posted for faculty.</p>
         ) : (
@@ -89,9 +110,16 @@ export function FacultyOpportunitiesPage() {
 
                     <div>
                       {isApplied ? (
-                        <span className="badge badge-success" style={{ padding: '6px 12px' }}><Check size={14} /> Applied</span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <span className="badge badge-success" style={{ padding: '6px 12px', fontSize: '12px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                            <Check size={14} /> Applied
+                          </span>
+                          <Link to="/faculty/applications" className="btn btn-outline btn-sm" style={{ padding: '4px 10px', fontSize: '12px' }}>
+                            View Status
+                          </Link>
+                        </div>
                       ) : (
-                        <button onClick={() => setSelectedOpp(opp)} className="btn btn-secondary btn-sm">
+                        <button onClick={() => handleOpenModal(opp)} className="btn btn-secondary btn-sm">
                           Apply / Express Interest
                         </button>
                       )}

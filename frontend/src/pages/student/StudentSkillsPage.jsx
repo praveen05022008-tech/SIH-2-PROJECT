@@ -1,16 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../../services/api';
 import { PortalLayout } from '../../components/layout/PortalLayout';
-import { Award, Plus, CheckCircle, ShieldCheck } from 'lucide-react';
+import { useToast } from '../../context/ToastContext';
+import { LoadingSpinner } from '../../components/common/LoadingSpinner';
+import { Award, Plus, ShieldCheck } from 'lucide-react';
 
 export function StudentSkillsPage() {
+  const toast = useToast();
   const [studentSkills, setStudentSkills] = useState([]);
   const [availableSkills, setAvailableSkills] = useState([]);
-  const [selectedSkillId, setSelectedSkillId] = useState('');
-  const [skillLevel, setSkillLevel] = useState('beginner');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [msg, setMsg] = useState('');
+  const [selectedSkillId, setSelectedSkillId] = useState('');
+  const [skillLevel, setSkillLevel] = useState('intermediate');
 
   useEffect(() => {
     fetchData();
@@ -19,33 +21,33 @@ export function StudentSkillsPage() {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [mySkills, allSkills] = await Promise.all([
+      const [sSkills, aSkills] = await Promise.all([
         api.get('/skills/my-skills'),
         api.get('/skills'),
       ]);
-      setStudentSkills(mySkills);
-      setAvailableSkills(allSkills);
-    } catch {}
-    setLoading(false);
+      setStudentSkills(sSkills);
+      setAvailableSkills(aSkills);
+      if (aSkills.length > 0) setSelectedSkillId(aSkills[0].id);
+    } catch (err) {
+      toast.error('Error loading skills data: ' + err.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleAddSkill = async (e) => {
     e.preventDefault();
     if (!selectedSkillId) return;
-
     setSaving(true);
-    setMsg('');
-
     try {
       await api.post('/skills/my-skills', {
         skill_id: parseInt(selectedSkillId),
         skill_level: skillLevel,
       });
-      setMsg('Skill added to your profile.');
-      setSelectedSkillId('');
+      toast.success('Skill added to your profile.');
       fetchData();
     } catch (err) {
-      setMsg(err.message || 'Failed to add skill.');
+      toast.error('Error saving skill: ' + err.message);
     } finally {
       setSaving(false);
     }
@@ -62,7 +64,7 @@ export function StudentSkillsPage() {
           </div>
 
           {loading ? (
-            <p className="text-muted">Loading registered skills...</p>
+            <LoadingSpinner message="Loading registered skills..." />
           ) : studentSkills.length === 0 ? (
             <div style={{ textAlign: 'center', padding: '32px 0' }}>
               <Award size={36} color="#94A3B8" style={{ margin: '0 auto 12px' }} />

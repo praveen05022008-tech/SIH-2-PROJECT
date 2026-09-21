@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { api } from '../../services/api';
 import { PortalLayout } from '../../components/layout/PortalLayout';
 import { ShieldCheck, Clock } from 'lucide-react';
+import { LoadingSpinner } from '../../components/common/LoadingSpinner';
 
 export function AdminAuditLogsPage() {
   const [logs, setLogs] = useState([]);
@@ -26,7 +27,7 @@ export function AdminAuditLogsPage() {
         </div>
 
         {loading ? (
-          <p className="text-muted">Loading audit entries...</p>
+          <LoadingSpinner message="Loading audit entries..." />
         ) : logs.length === 0 ? (
           <p className="text-muted" style={{ padding: '24px 0' }}>No audit records found.</p>
         ) : (

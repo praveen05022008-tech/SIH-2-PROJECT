@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { api } from '../../services/api';
 import { PortalLayout } from '../../components/layout/PortalLayout';
 import { GraduationCap } from 'lucide-react';
+import { LoadingSpinner } from '../../components/common/LoadingSpinner';
 
 export function InstitutionStudentsPage() {
   const [students, setStudents] = useState([]);
@@ -27,7 +28,7 @@ export function InstitutionStudentsPage() {
         </div>
 
         {loading ? (
-          <p className="text-muted">Loading student directory...</p>
+          <LoadingSpinner message="Loading student directory..." />
         ) : students.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '36px 0' }}>
             <GraduationCap size={36} color="#94A3B8" style={{ margin: '0 auto 12px' }} />

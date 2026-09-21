@@ -1,7 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../../services/api';
 import { PortalLayout } from '../../components/layout/PortalLayout';
+import { useToast } from '../../context/ToastContext';
+
 import { GraduationCap, Plus, Star, CheckCircle, ExternalLink } from 'lucide-react';
+import { LoadingSpinner } from '../../components/common/LoadingSpinner';
 
 export function IndustryMentorshipPage() {
   const [internships, setInternships] = useState([]);
@@ -37,6 +40,8 @@ export function IndustryMentorshipPage() {
       .finally(() => setLoading(false));
   };
 
+  const toast = useToast();
+
   const handleCreateTask = async (e) => {
     e.preventDefault();
     if (!selectedInternForTask) return;
@@ -50,8 +55,9 @@ export function IndustryMentorshipPage() {
       setTaskTitle('');
       setTaskDesc('');
       fetchInternships();
+      toast.success('Task assigned to intern.');
     } catch (err) {
-      alert('Error creating task: ' + err.message);
+      toast.error('Error creating task: ' + err.message);
     }
   };
 
@@ -68,8 +74,9 @@ export function IndustryMentorshipPage() {
       setGrade('A');
       setFeedback('');
       fetchInternships();
+      toast.success('Task reviewed and graded.');
     } catch (err) {
-      alert('Error reviewing task: ' + err.message);
+      toast.error('Error reviewing task: ' + err.message);
     }
   };
 
@@ -86,9 +93,9 @@ export function IndustryMentorshipPage() {
       setSelectedInternForFeedback(null);
       setFbText('');
       fetchInternships();
-      alert('Mentor evaluation recorded.');
+      toast.success('Mentor evaluation report recorded.');
     } catch (err) {
-      alert('Error submitting feedback: ' + err.message);
+      toast.error('Error submitting feedback: ' + err.message);
     }
   };
 
@@ -104,7 +111,7 @@ export function IndustryMentorshipPage() {
         </div>
 
         {loading ? (
-          <p className="text-muted">Loading interns...</p>
+          <LoadingSpinner message="Loading interns and mentorship tasks..." />
         ) : internships.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '36px 0' }}>
             <GraduationCap size={36} color="#94A3B8" style={{ margin: '0 auto 12px' }} />

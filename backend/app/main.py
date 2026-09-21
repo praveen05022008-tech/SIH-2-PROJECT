@@ -10,7 +10,8 @@ from app.routers import (
     auth, users, profiles, skills,
     assessments, opportunities, applications,
     internships, portfolios, collaborations,
-    learning, documents, analytics, admin
+    learning, documents, analytics, admin,
+    ai
 )
 
 app = FastAPI(
@@ -28,7 +29,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Serve uploaded documents
+# Serve uploaded documents fallback
 os.makedirs(settings.UPLOAD_DIR, exist_ok=True)
 app.mount("/uploads", StaticFiles(directory=settings.UPLOAD_DIR), name="uploads")
 
@@ -48,6 +49,7 @@ app.include_router(learning.router, prefix=v1)
 app.include_router(documents.router, prefix=v1)
 app.include_router(analytics.router, prefix=v1)
 app.include_router(admin.router, prefix=v1)
+app.include_router(ai.router, prefix=v1)
 
 @app.on_event("startup")
 def on_startup():
@@ -58,6 +60,9 @@ def health_check():
     return {
         "status": "healthy",
         "project": settings.PROJECT_NAME,
+        "database": "TiDB Distributed SQL",
+        "storage": "Cloudinary CDN",
+        "ai_engine": "Groq Cloud API",
         "version": "1.0.0"
     }
 

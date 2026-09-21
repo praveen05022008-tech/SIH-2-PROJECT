@@ -2,7 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { api } from '../../services/api';
 import { PortalLayout } from '../../components/layout/PortalLayout';
-import { Users, FileText, CheckCircle, XCircle, Clock } from 'lucide-react';
+import { useToast } from '../../context/ToastContext';
+import { getDocumentViewUrl } from '../../utils/fileUrl';
+import { Users, FileText, CheckCircle, XCircle, Clock, Sparkles, HelpCircle, Loader2 } from 'lucide-react';
+import { LoadingSpinner } from '../../components/common/LoadingSpinner';
 
 export function IndustryApplicationsPage() {
   const [searchParams] = useSearchParams();
@@ -19,6 +22,10 @@ export function IndustryApplicationsPage() {
   const [newStatus, setNewStatus] = useState('shortlisted');
   const [reviewerNotes, setReviewerNotes] = useState('');
   const [updating, setUpdating] = useState(false);
+
+  // AI Candidate Insights
+  const [aiInsights, setAiInsights] = useState(null);
+  const [loadingAi, setLoadingAi] = useState(false);
 
   useEffect(() => {
     api.get('/opportunities?my_only=true')
@@ -48,6 +55,27 @@ export function IndustryApplicationsPage() {
     setSelectedApp(app);
     setNewStatus(app.status === 'applied' ? 'shortlisted' : app.status);
     setReviewerNotes(app.reviewer_notes || '');
+    setAiInsights(null);
+  };
+
+  const toast = useToast();
+
+  const fetchAICandidateInsights = async () => {
+    if (!selectedApp) return;
+    setLoadingAi(true);
+    try {
+      const res = await api.post('/ai/candidate-insights', {
+        applicant_user_id: selectedApp.applicant_user_id || selectedApp.applicant?.user_id,
+        student_id: selectedApp.applicant_user_id || selectedApp.applicant?.user_id,
+        opportunity_id: selectedApp.opportunity_id
+      });
+      setAiInsights(res);
+      toast.success('Generated AI Candidate Suitability Insights.');
+    } catch (err) {
+      toast.error('Could not generate AI insights: ' + err.message);
+    } finally {
+      setLoadingAi(false);
+    }
   };
 
   const handleUpdateStatus = async (e) => {
@@ -62,15 +90,16 @@ export function IndustryApplicationsPage() {
       });
       setSelectedApp(null);
       fetchApplications();
+      toast.success(`Application updated to '${newStatus.replace('_', ' ')}'.`);
     } catch (err) {
-      alert('Error updating status: ' + err.message);
+      toast.error('Error updating status: ' + err.message);
     } finally {
       setUpdating(false);
     }
   };
 
   return (
-    <PortalLayout title="Candidate Pipeline & Recruitment Desk" allowedRoles={['industry']}>
+    <PortalLayout title="Candidate Pipeline & Groq AI Talent Evaluation" allowedRoles={['industry']}>
       {/* Filter Bar */}
       <div className="card" style={{ marginBottom: '20px' }}>
         <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', alignItems: 'center' }}>
@@ -114,7 +143,7 @@ export function IndustryApplicationsPage() {
         </div>
 
         {loading ? (
-          <p className="text-muted">Loading candidate pipeline...</p>
+          <LoadingSpinner message="Loading candidate pipeline from TiDB..." />
         ) : applications.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '36px 0' }}>
             <Users size={36} color="#94A3B8" style={{ margin: '0 auto 12px' }} />
@@ -193,7 +222,7 @@ export function IndustryApplicationsPage() {
       {/* Review Modal */}
       {selectedApp && (
         <div className="modal-overlay">
-          <div className="modal-content">
+          <div className="modal-content" style={{ maxWidth: '640px' }}>
             <div className="card-header">
               <div>
                 <h3 className="card-title">Evaluate Candidate: {selectedApp.applicant?.full_name}</h3>
@@ -206,17 +235,61 @@ export function IndustryApplicationsPage() {
 
             <div style={{ backgroundColor: '#F8FAFC', padding: '12px', borderRadius: '4px', marginBottom: '16px', fontSize: '13px' }}>
               <div style={{ fontWeight: 600, color: '#1E2A44', marginBottom: '4px' }}>Candidate Statement / Cover Note:</div>
-              <p style={{ color: '#475569', lineHeight: '1.5', fontStyle: 'italic' }}>
+              <p style={{ color: '#475569', lineHeight: '1.5', fontStyle: 'italic', margin: 0 }}>
                 "{selectedApp.cover_note || 'No cover note submitted.'}"
               </p>
-              {selectedApp.resume_url && (
-                <div style={{ marginTop: '10px' }}>
-                  <a href={selectedApp.resume_url} target="_blank" rel="noreferrer" className="btn btn-outline btn-sm">
-                    <FileText size={13} /> View Attached Resume
+              <div style={{ display: 'flex', gap: '10px', marginTop: '10px', alignItems: 'center' }}>
+                {selectedApp.resume_url && (
+                  <a href={getDocumentViewUrl(selectedApp.resume_url)} target="_blank" rel="noreferrer" className="btn btn-outline btn-sm">
+                    <FileText size={13} /> View Candidate Resume
                   </a>
-                </div>
-              )}
+                )}
+                <button
+                  type="button"
+                  onClick={fetchAICandidateInsights}
+                  disabled={loadingAi}
+                  className="btn btn-primary btn-sm"
+                  style={{ display: 'flex', alignItems: 'center', gap: '6px', backgroundColor: '#3B5BDB' }}
+                >
+                  {loadingAi ? <Loader2 size={13} className="animate-spin" /> : <Sparkles size={13} />}
+                  {loadingAi ? 'Analyzing Fit...' : 'Groq AI Fit Analysis'}
+                </button>
+              </div>
             </div>
+
+            {/* AI Insights Card */}
+            {aiInsights && (
+              <div style={{ backgroundColor: '#EFF6FF', border: '1px solid #BFDBFE', borderRadius: '6px', padding: '14px', marginBottom: '16px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#1E40AF', fontWeight: 700, fontSize: '13px', marginBottom: '6px' }}>
+                  <Sparkles size={16} /> AI Candidate Suitability Assessment
+                </div>
+                <p style={{ fontSize: '13px', color: '#1E3A8A', marginBottom: '8px' }}>
+                  <strong>Verdict:</strong> {aiInsights.match_verdict}
+                </p>
+                {aiInsights.key_strengths?.length > 0 && (
+                  <div style={{ fontSize: '12.5px', marginBottom: '6px' }}>
+                    <strong style={{ color: '#166534' }}>Key Strengths:</strong> {aiInsights.key_strengths.join(', ')}
+                  </div>
+                )}
+                {aiInsights.potential_gaps?.length > 0 && (
+                  <div style={{ fontSize: '12.5px', marginBottom: '8px' }}>
+                    <strong style={{ color: '#991B1B' }}>Potential Skill Gaps:</strong> {aiInsights.potential_gaps.join(', ')}
+                  </div>
+                )}
+                {aiInsights.suggested_interview_questions?.length > 0 && (
+                  <div style={{ marginTop: '8px', paddingTop: '8px', borderTop: '1px solid #DBEAFE' }}>
+                    <div style={{ fontWeight: 600, fontSize: '12px', color: '#1E3A8A', marginBottom: '4px' }}>
+                      Recommended Technical Interview Questions:
+                    </div>
+                    <ul style={{ margin: 0, paddingLeft: '16px', fontSize: '12px', color: '#1E293B' }}>
+                      {aiInsights.suggested_interview_questions.map((q, qIdx) => (
+                        <li key={qIdx}>{q}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
+            )}
 
             <form onSubmit={handleUpdateStatus}>
               <div className="form-group">

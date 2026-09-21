@@ -30,12 +30,17 @@ export async function request(endpoint, options = {}) {
   }
 
   if (!response.ok) {
-    let errorDetail = 'An error occurred';
+    let errorDetail = `HTTP ${response.status}`;
     try {
-      const errJson = await response.json();
-      errorDetail = errJson.detail || errJson.message || JSON.stringify(errJson);
+      const text = await response.text();
+      try {
+        const errJson = JSON.parse(text);
+        errorDetail = errJson.detail || errJson.message || JSON.stringify(errJson);
+      } catch {
+        errorDetail = text || errorDetail;
+      }
     } catch {
-      errorDetail = await response.text();
+      // fallback to status
     }
     throw new Error(errorDetail || `HTTP ${response.status}`);
   }

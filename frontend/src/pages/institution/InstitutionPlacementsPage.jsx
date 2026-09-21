@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { api } from '../../services/api';
 import { PortalLayout } from '../../components/layout/PortalLayout';
 import { Briefcase, GraduationCap } from 'lucide-react';
+import { LoadingSpinner } from '../../components/common/LoadingSpinner';
 
 export function InstitutionPlacementsPage() {
   const [internships, setInternships] = useState([]);
@@ -26,7 +27,7 @@ export function InstitutionPlacementsPage() {
         </div>
 
         {loading ? (
-          <p className="text-muted">Loading placement records...</p>
+          <LoadingSpinner message="Loading placement records..." />
         ) : internships.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '36px 0' }}>
             <Briefcase size={36} color="#94A3B8" style={{ margin: '0 auto 12px' }} />

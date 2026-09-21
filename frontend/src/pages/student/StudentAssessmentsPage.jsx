@@ -2,7 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../../services/api';
 import { PortalLayout } from '../../components/layout/PortalLayout';
-import { Award, Clock, CheckCircle, AlertCircle, Play } from 'lucide-react';
+import { useToast } from '../../context/ToastContext';
+import { LoadingSpinner } from '../../components/common/LoadingSpinner';
+import { Award, Clock, CheckCircle2, AlertCircle, Play, ChevronRight, HelpCircle } from 'lucide-react';
 
 export function StudentAssessmentsPage() {
   const [assessments, setAssessments] = useState([]);
@@ -176,7 +178,7 @@ export function StudentAssessmentsPage() {
           </div>
 
           {loading ? (
-            <p className="text-muted">Loading assessments from database...</p>
+            <LoadingSpinner message="Loading assessments from database..." />
           ) : assessments.length === 0 ? (
             <div style={{ textAlign: 'center', padding: '32px 0' }}>
               <Award size={36} color="#94A3B8" style={{ margin: '0 auto 12px' }} />

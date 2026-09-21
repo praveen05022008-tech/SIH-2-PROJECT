@@ -2,6 +2,7 @@ import os
 import shutil
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Form
+from fastapi.responses import FileResponse, RedirectResponse
 from sqlalchemy.orm import Session
 from app.config import settings
 from app.database import get_db
@@ -12,11 +13,12 @@ from app.schemas.document import DocumentResponse, DocumentVerificationCreate, D
 from app.core.deps import get_current_user, require_role
 from app.core.audit import log_audit
 from app.services.notification import send_notification
+from app.services.cloudinary_service import upload_file_to_cloudinary
 
 router = APIRouter(prefix="/documents", tags=["Document Management & Verification"])
 
 ALLOWED_EXTENSIONS = {".pdf", ".png", ".jpg", ".jpeg", ".doc", ".docx"}
-MAX_FILE_SIZE = 10 * 1024 * 1024  # 10 MB
+MAX_FILE_SIZE = 15 * 1024 * 1024  # 15 MB
 
 @router.post("/upload", response_model=DocumentResponse, status_code=status.HTTP_201_CREATED)
 async def upload_document(
@@ -32,26 +34,37 @@ async def upload_document(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"File extension {ext} not allowed. Supported: {', '.join(ALLOWED_EXTENSIONS)}"
         )
-        
-    safe_filename = f"user_{current_user.id}_{int(os.times().system)}_{file.filename.replace(' ', '_')}"
-    file_path = os.path.join(settings.UPLOAD_DIR, safe_filename)
     
-    # Save file to disk
-    with open(file_path, "wb") as buffer:
-        shutil.copyfileobj(file.file, buffer)
-        
-    file_size = os.path.getsize(file_path)
+    file_bytes = await file.read()
+    file_size = len(file_bytes)
     if file_size > MAX_FILE_SIZE:
-        os.remove(file_path)
-        raise HTTPException(status_code=400, detail="File size exceeds maximum permitted 10MB")
+        raise HTTPException(status_code=400, detail="File size exceeds maximum permitted 15MB")
+        
+    # Always save a local copy in UPLOAD_DIR for instant resilient preview
+    safe_filename = f"doc_{current_user.id}_{document_type}_{int(os.times().system)}_{file.filename.replace(' ', '_')}"
+    local_file_path = os.path.join(settings.UPLOAD_DIR, safe_filename)
+    with open(local_file_path, "wb") as buffer:
+        buffer.write(file_bytes)
+        
+    # Upload to Cloudinary with user/document namespacing
+    folder_name = f"aic_portal/{document_type}s"
+    try:
+        cloudinary_res = upload_file_to_cloudinary(
+            file_bytes_or_buffer=file_bytes,
+            folder=folder_name,
+            resource_type="auto"
+        )
+        file_url = cloudinary_res["secure_url"]
+    except Exception as e:
+        file_url = f"/uploads/{safe_filename}"
         
     doc = Document(
         owner_user_id=current_user.id,
         title=title,
         document_type=document_type,
-        file_path=f"/uploads/{safe_filename}",
+        file_path=file_url,
         file_size=file_size,
-        mime_type=file.content_type or "application/octet-stream"
+        mime_type=file.content_type or "application/pdf"
     )
     db.add(doc)
     db.commit()
@@ -70,7 +83,7 @@ async def upload_document(
         user_id=current_user.id,
         resource_type="DOCUMENT",
         resource_id=str(doc.id),
-        details={"filename": file.filename, "type": document_type}
+        details={"filename": file.filename, "type": document_type, "url": doc.file_path}
     )
     
     return {
@@ -86,6 +99,30 @@ async def upload_document(
         "verification_remarks": None,
         "owner_name": current_user.username
     }
+
+@router.get("/{document_id}/file")
+def get_document_file(
+    document_id: int,
+    db: Session = Depends(get_db)
+):
+    doc = db.query(Document).filter(Document.id == document_id).first()
+    if not doc:
+        raise HTTPException(status_code=404, detail="Document not found")
+        
+    # Search if local file exists
+    if os.path.exists(settings.UPLOAD_DIR):
+        for fname in os.listdir(settings.UPLOAD_DIR):
+            if fname.startswith(f"doc_{doc.owner_user_id}_{doc.document_type}") or fname.startswith(f"user_{doc.owner_user_id}_"):
+                fpath = os.path.join(settings.UPLOAD_DIR, fname)
+                if os.path.isfile(fpath):
+                    return FileResponse(fpath, media_type=doc.mime_type or "application/pdf", filename=f"{doc.title}.pdf")
+                    
+    if doc.file_path.startswith("http"):
+        return RedirectResponse(url=doc.file_path)
+    elif os.path.exists(os.path.join(settings.UPLOAD_DIR, os.path.basename(doc.file_path))):
+        return FileResponse(os.path.join(settings.UPLOAD_DIR, os.path.basename(doc.file_path)), media_type=doc.mime_type or "application/pdf")
+    else:
+        raise HTTPException(status_code=404, detail="Document content not available on disk")
 
 @router.get("", response_model=List[DocumentResponse])
 def get_documents(

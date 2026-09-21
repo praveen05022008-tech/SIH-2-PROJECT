@@ -1,6 +1,8 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
+import { ToastProvider } from './context/ToastContext';
+
 
 // Public Pages
 import { LandingPage } from './pages/public/LandingPage';
@@ -28,7 +30,9 @@ import { StudentLearningPage } from './pages/student/StudentLearningPage';
 import { FacultyDashboard } from './pages/faculty/FacultyDashboard';
 import { FacultyProfilePage } from './pages/faculty/FacultyProfilePage';
 import { FacultyOpportunitiesPage } from './pages/faculty/FacultyOpportunitiesPage';
+import { FacultyApplicationsPage } from './pages/faculty/FacultyApplicationsPage';
 import { FacultyCollaborationsPage } from './pages/faculty/FacultyCollaborationsPage';
+import { StudentLearningPage as FacultyLearningPage } from './pages/student/StudentLearningPage';
 
 // Industry Pages
 import { IndustryDashboard } from './pages/industry/IndustryDashboard';
@@ -57,9 +61,11 @@ import { AdminSettingsPage } from './pages/admin/AdminSettingsPage';
 
 export default function App() {
   return (
-    <AuthProvider>
-      <BrowserRouter>
-        <Routes>
+    <ToastProvider>
+      <AuthProvider>
+        <BrowserRouter>
+          <Routes>
+
           {/* Public Routes */}
           <Route path="/" element={<LandingPage />} />
           <Route path="/about" element={<AboutPage />} />
@@ -86,9 +92,9 @@ export default function App() {
           <Route path="/faculty/dashboard" element={<FacultyDashboard />} />
           <Route path="/faculty/profile" element={<FacultyProfilePage />} />
           <Route path="/faculty/opportunities" element={<FacultyOpportunitiesPage />} />
-          <Route path="/faculty/applications" element={<FacultyOpportunitiesPage />} />
+          <Route path="/faculty/applications" element={<FacultyApplicationsPage />} />
           <Route path="/faculty/collaborations" element={<FacultyCollaborationsPage />} />
-          <Route path="/faculty/learning-programs" element={<StudentLearningPage />} />
+          <Route path="/faculty/learning-programs" element={<FacultyLearningPage />} />
 
           {/* Role 3: Industry Routes */}
           <Route path="/industry/dashboard" element={<IndustryDashboard />} />
@@ -123,5 +129,7 @@ export default function App() {
         </Routes>
       </BrowserRouter>
     </AuthProvider>
+    </ToastProvider>
   );
 }
+

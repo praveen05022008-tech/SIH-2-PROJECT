@@ -4,6 +4,7 @@ import { useAuth } from '../../context/AuthContext';
 import { api } from '../../services/api';
 import { PortalLayout } from '../../components/layout/PortalLayout';
 import { GraduationCap, Users, Briefcase, FileCheck, Building2, ShieldCheck, ArrowRight } from 'lucide-react';
+import { LoadingSpinner } from '../../components/common/LoadingSpinner';
 
 export function InstitutionDashboard() {
   const { user } = useAuth();
@@ -88,7 +89,7 @@ export function InstitutionDashboard() {
           </div>
 
           {loading ? (
-            <p className="text-muted">Loading department analytics...</p>
+            <LoadingSpinner message="Loading department analytics..." />
           ) : metrics.department_breakdown?.length === 0 ? (
             <p className="text-muted" style={{ padding: '24px 0' }}>No departments registered yet. Add departments to structure student enrollments.</p>
           ) : (

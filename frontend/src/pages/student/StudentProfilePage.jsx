@@ -1,7 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../../services/api';
 import { PortalLayout } from '../../components/layout/PortalLayout';
-import { CheckCircle, AlertCircle, Upload } from 'lucide-react';
+import { useToast } from '../../context/ToastContext';
+import { getDocumentViewUrl } from '../../utils/fileUrl';
+import { CheckCircle, AlertCircle, Upload, Sparkles, Loader2, FileText, Check } from 'lucide-react';
+import { ENGINEERING_DEPARTMENTS } from '../../constants/departments';
+import { LoadingSpinner } from '../../components/common/LoadingSpinner';
+
 
 export function StudentProfilePage() {
   const [profile, setProfile] = useState({
@@ -23,6 +28,12 @@ export function StudentProfilePage() {
   const [msg, setMsg] = useState({ type: '', text: '' });
   const [resumeFile, setResumeFile] = useState(null);
   const [uploadingResume, setUploadingResume] = useState(false);
+
+  // AI Resume Parser
+  const [showAiResumeModal, setShowAiResumeModal] = useState(false);
+  const [resumeTextInput, setResumeTextInput] = useState('');
+  const [parsingResume, setParsingResume] = useState(false);
+  const [parsedData, setParsedData] = useState(null);
 
   useEffect(() => {
     api.get('/profiles/student')
@@ -73,7 +84,7 @@ export function StudentProfilePage() {
     try {
       const doc = await api.post('/documents/upload', formData);
       setProfile((prev) => ({ ...prev, resume_url: doc.file_path }));
-      setMsg({ type: 'success', text: 'Resume uploaded and linked to profile.' });
+      setMsg({ type: 'success', text: 'Resume uploaded to Cloudinary and linked to profile.' });
     } catch (err) {
       setMsg({ type: 'error', text: err.message || 'Failed to upload resume.' });
     } finally {
@@ -81,12 +92,44 @@ export function StudentProfilePage() {
     }
   };
 
+  const toast = useToast();
+
+  const handleExtractResumeSkills = async (e) => {
+    e.preventDefault();
+    if (!resumeTextInput.trim()) {
+      toast.warning('Please paste resume text to extract skills.');
+      return;
+    }
+    setParsingResume(true);
+    try {
+      const res = await api.post('/ai/extract-resume', {
+        resume_text: resumeTextInput
+      });
+      setParsedData(res);
+      if (res.suggested_roles?.length > 0) {
+        setProfile((prev) => ({
+          ...prev,
+          preferred_roles: res.suggested_roles.join(', ')
+        }));
+      }
+      toast.success('Skills and career roles extracted successfully via Groq AI.');
+    } catch (err) {
+      toast.error('Failed to extract resume: ' + err.message);
+    } finally {
+      setParsingResume(false);
+    }
+  };
+
   if (loading) {
-    return <PortalLayout title="My Profile" allowedRoles={['student']}><p>Loading Profile...</p></PortalLayout>;
+    return (
+      <PortalLayout title="My Profile" allowedRoles={['student']}>
+        <LoadingSpinner message="Loading Profile credentials from TiDB..." />
+      </PortalLayout>
+    );
   }
 
   return (
-    <PortalLayout title="My Profile" allowedRoles={['student']}>
+    <PortalLayout title="My Profile & Credentials" allowedRoles={['student']}>
       <div style={{ maxWidth: '840px' }}>
         {msg.text && (
           <div style={{
@@ -107,8 +150,16 @@ export function StudentProfilePage() {
         )}
 
         <div className="card">
-          <div className="card-header">
+          <div className="card-header" style={{ flexWrap: 'wrap', gap: '12px' }}>
             <h3 className="card-title">Academic & Personal Details</h3>
+            <button
+              type="button"
+              onClick={() => setShowAiResumeModal(true)}
+              className="btn btn-outline btn-sm"
+              style={{ display: 'flex', alignItems: 'center', gap: '6px', borderColor: '#3B5BDB', color: '#3B5BDB' }}
+            >
+              <Sparkles size={14} /> Groq AI Resume Skill Extractor
+            </button>
           </div>
 
           <form onSubmit={handleSubmit}>
@@ -148,12 +199,18 @@ export function StudentProfilePage() {
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px' }}>
               <div className="form-group">
                 <label className="form-label">Degree / Course</label>
-                <input
-                  type="text"
+                <select
                   className="form-control"
                   value={profile.course}
                   onChange={(e) => setProfile({ ...profile, course: e.target.value })}
-                />
+                >
+                  <option value="">-- Select Degree / Branch --</option>
+                  {ENGINEERING_DEPARTMENTS.map((dept) => (
+                    <option key={dept} value={dept}>
+                      {dept}
+                    </option>
+                  ))}
+                </select>
               </div>
 
               <div className="form-group">
@@ -214,25 +271,25 @@ export function StudentProfilePage() {
           </form>
         </div>
 
-        {/* Resume Upload Box */}
+        {/* Cloudinary Resume Upload Box */}
         <div className="card">
           <div className="card-header">
-            <h3 className="card-title">Curriculum Vitae / Resume</h3>
+            <h3 className="card-title">Curriculum Vitae / Resume on Cloudinary</h3>
           </div>
           {profile.resume_url ? (
             <div style={{ marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <span className="badge badge-success">Resume Uploaded</span>
-              <a href={profile.resume_url} target="_blank" rel="noreferrer" style={{ fontSize: '13px' }}>
+              <span className="badge badge-success">Cloudinary Secured</span>
+              <a href={getDocumentViewUrl(profile.resume_url)} target="_blank" rel="noreferrer" style={{ fontSize: '13px' }}>
                 View Current Resume Document
               </a>
             </div>
           ) : (
             <p className="text-muted" style={{ fontSize: '13px', marginBottom: '14px' }}>
-              Upload your PDF resume to automatically attach it to internship and job applications.
+              Upload your PDF resume to Cloudinary to automatically attach it to internship and job applications.
             </p>
           )}
 
-          <form onSubmit={handleResumeUpload} style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+          <form onSubmit={handleResumeUpload} style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
             <input
               type="file"
               accept=".pdf,.doc,.docx"
@@ -242,11 +299,84 @@ export function StudentProfilePage() {
             />
             <button type="submit" className="btn btn-secondary btn-sm" disabled={!resumeFile || uploadingResume}>
               <Upload size={14} />
-              {uploadingResume ? 'Uploading...' : 'Upload Resume'}
+              {uploadingResume ? 'Uploading to Cloudinary...' : 'Upload Resume'}
             </button>
           </form>
         </div>
       </div>
+
+      {/* AI Resume Skill Extractor Modal */}
+      {showAiResumeModal && (
+        <div className="modal-overlay">
+          <div className="modal-content" style={{ maxWidth: '580px' }}>
+            <div className="card-header">
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Sparkles size={18} color="#3B5BDB" />
+                <h3 className="card-title">Groq AI Resume Skill Extractor</h3>
+              </div>
+              <button onClick={() => setShowAiResumeModal(false)} className="btn btn-outline btn-sm">Close</button>
+            </div>
+
+            <form onSubmit={handleExtractResumeSkills}>
+              <div className="form-group">
+                <label className="form-label">Paste Resume Text / Summary</label>
+                <textarea
+                  className="form-control"
+                  rows={6}
+                  placeholder="Paste your resume content, summary, projects, and work experience here..."
+                  value={resumeTextInput}
+                  onChange={(e) => setResumeTextInput(e.target.value)}
+                  disabled={parsingResume}
+                  required
+                />
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginBottom: '16px' }}>
+                <button type="button" onClick={() => setShowAiResumeModal(false)} className="btn btn-outline btn-sm" disabled={parsingResume}>Cancel</button>
+                <button
+                  type="submit"
+                  className="btn btn-primary btn-sm"
+                  disabled={parsingResume || !resumeTextInput.trim()}
+                  style={{ display: 'flex', alignItems: 'center', gap: '6px', backgroundColor: '#3B5BDB' }}
+                >
+                  {parsingResume ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />}
+                  {parsingResume ? 'Extracting with Groq...' : 'Extract Skills & Roles'}
+                </button>
+              </div>
+            </form>
+
+            {parsedData && (
+              <div style={{ backgroundColor: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '6px', padding: '14px', fontSize: '13px' }}>
+                <h4 style={{ fontSize: '14px', color: '#1E2A44', marginBottom: '8px' }}>AI Extracted Profile Insights:</h4>
+                
+                {parsedData.technical_skills?.length > 0 && (
+                  <div style={{ marginBottom: '8px' }}>
+                    <strong>Technical Skills:</strong>{' '}
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '4px' }}>
+                      {parsedData.technical_skills.map((s, idx) => (
+                        <span key={idx} className="badge badge-info">{s}</span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {parsedData.suggested_roles?.length > 0 && (
+                  <div style={{ marginBottom: '8px' }}>
+                    <strong>Suggested Career Roles:</strong>{' '}
+                    <span style={{ color: '#3B5BDB', fontWeight: 600 }}>{parsedData.suggested_roles.join(', ')}</span>
+                  </div>
+                )}
+
+                {parsedData.experience_summary && (
+                  <div style={{ color: '#475569', fontSize: '12px', marginTop: '6px' }}>
+                    <em>{parsedData.experience_summary}</em>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </PortalLayout>
   );
 }

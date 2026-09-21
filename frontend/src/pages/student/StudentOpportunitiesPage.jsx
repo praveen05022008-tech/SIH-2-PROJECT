@@ -1,9 +1,13 @@
 import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { api } from '../../services/api';
 import { PortalLayout } from '../../components/layout/PortalLayout';
-import { Briefcase, MapPin, Building, Clock, CheckCircle2, AlertCircle, Send, Check } from 'lucide-react';
+import { useToast } from '../../context/ToastContext';
+import { LoadingSpinner } from '../../components/common/LoadingSpinner';
+import { Briefcase, MapPin, Building, Clock, CheckCircle2, AlertCircle, Send, Check, ExternalLink } from 'lucide-react';
 
 export function StudentOpportunitiesPage() {
+  const toast = useToast();
   const [opportunities, setOpportunities] = useState([]);
   const [loading, setLoading] = useState(true);
   const [typeFilter, setTypeFilter] = useState('');
@@ -50,6 +54,10 @@ export function StudentOpportunitiesPage() {
   };
 
   const handleOpenApplyModal = (opp) => {
+    if (appliedIds.has(opp.id)) {
+      toast.info(`You have already applied for ${opp.title}.`);
+      return;
+    }
     setSelectedOpp(opp);
     setCoverNote('');
     setApplyMsg({ type: '', text: '' });
@@ -66,11 +74,19 @@ export function StudentOpportunitiesPage() {
         opportunity_id: selectedOpp.id,
         cover_note: coverNote,
       });
-      setApplyMsg({ type: 'success', text: 'Application submitted successfully to employer.' });
       setAppliedIds((prev) => new Set([...prev, selectedOpp.id]));
-      setTimeout(() => setSelectedOpp(null), 1500);
+      toast.success('Application submitted successfully to employer.');
+      setSelectedOpp(null);
     } catch (err) {
-      setApplyMsg({ type: 'error', text: err.message || 'Failed to submit application.' });
+      const msg = err.message || 'Failed to submit application.';
+      if (msg.toLowerCase().includes('already submitted') || msg.toLowerCase().includes('already applied')) {
+        setAppliedIds((prev) => new Set([...prev, selectedOpp.id]));
+        toast.warning('You have already applied for this opening.');
+        setTimeout(() => setSelectedOpp(null), 1200);
+      } else {
+        toast.error(msg);
+      }
+      setApplyMsg({ type: 'error', text: msg });
     } finally {
       setApplying(false);
     }
@@ -123,7 +139,9 @@ export function StudentOpportunitiesPage() {
 
       {/* Opportunities List */}
       {loading ? (
-        <p className="text-muted">Fetching verified opportunities from database...</p>
+        <div className="card" style={{ padding: '30px', display: 'flex', justifyContent: 'center' }}>
+          <LoadingSpinner message="Fetching verified opportunities from database..." />
+        </div>
       ) : opportunities.length === 0 ? (
         <div className="card" style={{ textAlign: 'center', padding: '40px' }}>
           <Briefcase size={36} color="#94A3B8" style={{ margin: '0 auto 12px' }} />
@@ -173,9 +191,14 @@ export function StudentOpportunitiesPage() {
 
                   <div>
                     {isApplied ? (
-                      <span className="badge badge-success" style={{ padding: '6px 12px', fontSize: '12px', display: 'inline-flex', gap: '4px' }}>
-                        <Check size={14} /> Applied
-                      </span>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <span className="badge badge-success" style={{ padding: '6px 12px', fontSize: '12px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                          <Check size={14} /> Applied
+                        </span>
+                        <Link to="/student/applications" className="btn btn-outline btn-sm" style={{ padding: '4px 10px', fontSize: '12px' }}>
+                          Track Status
+                        </Link>
+                      </div>
                     ) : (
                       <button
                         onClick={() => handleOpenApplyModal(opp)}

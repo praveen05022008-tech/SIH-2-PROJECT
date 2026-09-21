@@ -5,6 +5,8 @@ import { api } from '../../services/api';
 import { PublicHeader } from '../../components/layout/PublicHeader';
 import { PublicFooter } from '../../components/layout/PublicFooter';
 import { CheckCircle, AlertCircle } from 'lucide-react';
+import { ENGINEERING_DEPARTMENTS } from '../../constants/departments';
+
 
 export function RegisterPage() {
   const [role, setRole] = useState('student');
@@ -223,13 +225,19 @@ export function RegisterPage() {
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
                     <div className="form-group">
                       <label className="form-label">Degree / Course</label>
-                      <input
-                        type="text"
+                      <select
                         className="form-control"
-                        placeholder="e.g. B.Tech Computer Science / B.Sc Biotechnology"
                         value={course}
                         onChange={(e) => setCourse(e.target.value)}
-                      />
+                        required
+                      >
+                        <option value="">-- Select Degree / Branch --</option>
+                        {ENGINEERING_DEPARTMENTS.map((dept) => (
+                          <option key={dept} value={dept}>
+                            {dept}
+                          </option>
+                        ))}
+                      </select>
                     </div>
                     <div className="form-group">
                       <label className="form-label">Year of Study</label>

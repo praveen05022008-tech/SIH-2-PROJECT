@@ -1,14 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../../services/api';
 import { PortalLayout } from '../../components/layout/PortalLayout';
-import { Award, Plus, CheckCircle, Clock } from 'lucide-react';
+import { useToast } from '../../context/ToastContext';
+
+import { Award, Plus, CheckCircle, Clock, Sparkles, Loader2 } from 'lucide-react';
+import { LoadingSpinner } from '../../components/common/LoadingSpinner';
 
 export function AdminAssessmentsPage() {
   const [assessments, setAssessments] = useState([]);
   const [skills, setSkills] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // New assessment modal
+  // New manual assessment modal
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [title, setTitle] = useState('');
   const [assType, setAssType] = useState('technical');
@@ -16,6 +19,14 @@ export function AdminAssessmentsPage() {
   const [passingMarks, setPassingMarks] = useState(50);
   const [totalMarks, setTotalMarks] = useState(100);
   const [linkedSkillId, setLinkedSkillId] = useState('');
+
+  // AI Quiz Generator modal
+  const [showAIModal, setShowAIModal] = useState(false);
+  const [aiSkillName, setAiSkillName] = useState('');
+  const [aiDifficulty, setAiDifficulty] = useState('intermediate');
+  const [aiNumQuestions, setAiNumQuestions] = useState(5);
+  const [aiSubtopics, setAiSubtopics] = useState('');
+  const [aiGenerating, setAiGenerating] = useState(false);
 
   // Add question modal
   const [selectedAssForQ, setSelectedAssForQ] = useState(null);
@@ -44,6 +55,8 @@ export function AdminAssessmentsPage() {
     setLoading(false);
   };
 
+  const toast = useToast();
+
   const handleCreateAssessment = async (e) => {
     e.preventDefault();
     try {
@@ -59,8 +72,37 @@ export function AdminAssessmentsPage() {
       setShowCreateModal(false);
       setTitle('');
       fetchData();
+      toast.success('Assessment created and published.');
     } catch (err) {
-      alert('Error: ' + err.message);
+      toast.error('Error creating assessment: ' + err.message);
+    }
+  };
+
+  const handleGenerateAIQuiz = async (e) => {
+    e.preventDefault();
+    if (!aiSkillName.trim()) {
+      toast.warning('Please specify a skill name.');
+      return;
+    }
+    setAiGenerating(true);
+    try {
+      const res = await api.post('/ai/generate-quiz', {
+        skill_name: aiSkillName,
+        difficulty: aiDifficulty,
+        num_questions: parseInt(aiNumQuestions),
+        subtopics: aiSubtopics,
+        save_as_assessment: true,
+        assessment_title: `${aiSkillName} (${aiDifficulty.toUpperCase()}) Assessment`
+      });
+      setShowAIModal(false);
+      setAiSkillName('');
+      setAiSubtopics('');
+      fetchData();
+      toast.success(`Generated '${res.title}' with ${res.questions?.length || aiNumQuestions} questions via Groq AI!`);
+    } catch (err) {
+      toast.error('AI Generation Error: ' + err.message);
+    } finally {
+      setAiGenerating(false);
     }
   };
 
@@ -82,28 +124,41 @@ export function AdminAssessmentsPage() {
       setQOpt4('');
       setQCorrect('');
       fetchData();
+      toast.success('Question added to test bank.');
     } catch (err) {
-      alert('Error: ' + err.message);
+      toast.error('Error adding question: ' + err.message);
     }
   };
 
   return (
-    <PortalLayout title="Assessment Authoring & Test Banking" allowedRoles={['admin']}>
+    <PortalLayout title="Assessment Authoring & Groq AI Test Banking" allowedRoles={['admin', 'industry']}>
       <div className="card">
-        <div className="card-header">
+        <div className="card-header" style={{ flexWrap: 'wrap', gap: '12px' }}>
           <div>
-            <h3 className="card-title">Standardized Skill Assessments</h3>
-            <p className="text-muted" style={{ fontSize: '12px' }}>Configure tests and question banks for student competency verification</p>
+            <h3 className="card-title">Skill Assessment Catalog</h3>
+            <p className="text-muted" style={{ fontSize: '12px' }}>Author custom tests or generate comprehensive technical quizzes instantly using Groq AI</p>
           </div>
-          <button onClick={() => setShowCreateModal(true)} className="btn btn-secondary btn-sm">
-            <Plus size={13} /> Author Assessment
-          </button>
+          <div style={{ display: 'flex', gap: '10px' }}>
+            <button
+              onClick={() => setShowAIModal(true)}
+              className="btn btn-primary btn-sm"
+              style={{ display: 'flex', alignItems: 'center', gap: '6px', backgroundColor: '#3B5BDB' }}
+            >
+              <Sparkles size={14} /> Generate with Groq AI
+            </button>
+            <button onClick={() => setShowCreateModal(true)} className="btn btn-secondary btn-sm">
+              <Plus size={13} /> Manual Authoring
+            </button>
+          </div>
         </div>
 
         {loading ? (
-          <p className="text-muted">Loading assessments catalog...</p>
+          <LoadingSpinner message="Loading assessments from TiDB..." />
         ) : assessments.length === 0 ? (
-          <p className="text-muted" style={{ padding: '24px 0' }}>No assessments authored yet.</p>
+          <div style={{ padding: '32px', textAlign: 'center' }}>
+            <Award size={40} color="#94A3B8" style={{ margin: '0 auto 12px' }} />
+            <p className="text-muted">No assessments authored yet. Click "Generate with Groq AI" to build your first assessment bank in seconds!</p>
+          </div>
         ) : (
           <div className="table-responsive">
             <table className="table">
@@ -138,7 +193,93 @@ export function AdminAssessmentsPage() {
         )}
       </div>
 
-      {/* Create Assessment Modal */}
+      {/* Groq AI Quiz Generator Modal */}
+      {showAIModal && (
+        <div className="modal-overlay">
+          <div className="modal-content" style={{ maxWidth: '540px' }}>
+            <div className="card-header">
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Sparkles size={18} color="#3B5BDB" />
+                <h3 className="card-title">Generate Assessment with Groq AI</h3>
+              </div>
+              <button onClick={() => setShowAIModal(false)} className="btn btn-outline btn-sm" disabled={aiGenerating}>Close</button>
+            </div>
+            <form onSubmit={handleGenerateAIQuiz}>
+              <div className="form-group">
+                <label className="form-label">Skill or Domain Topic *</label>
+                <input
+                  type="text"
+                  className="form-control"
+                  placeholder="e.g. FastAPI & Async Python, React 18 Hooks, Cloud DevOps, Clinical Trial Protocols"
+                  value={aiSkillName}
+                  onChange={(e) => setAiSkillName(e.target.value)}
+                  required
+                  disabled={aiGenerating}
+                />
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
+                <div className="form-group">
+                  <label className="form-label">Difficulty Level</label>
+                  <select className="form-control" value={aiDifficulty} onChange={(e) => setAiDifficulty(e.target.value)} disabled={aiGenerating}>
+                    <option value="beginner">Beginner</option>
+                    <option value="intermediate">Intermediate</option>
+                    <option value="advanced">Advanced</option>
+                    <option value="expert">Expert</option>
+                  </select>
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Number of Questions</label>
+                  <input
+                    type="number"
+                    min="2"
+                    max="15"
+                    className="form-control"
+                    value={aiNumQuestions}
+                    onChange={(e) => setAiNumQuestions(e.target.value)}
+                    required
+                    disabled={aiGenerating}
+                  />
+                </div>
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">Specific Focus Subtopics (Optional)</label>
+                <textarea
+                  className="form-control"
+                  placeholder="e.g. State management, lifecycle methods, async error handling, security best practices"
+                  rows={2}
+                  value={aiSubtopics}
+                  onChange={(e) => setAiSubtopics(e.target.value)}
+                  disabled={aiGenerating}
+                />
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '16px' }}>
+                <button type="button" onClick={() => setShowAIModal(false)} className="btn btn-outline btn-sm" disabled={aiGenerating}>Cancel</button>
+                <button
+                  type="submit"
+                  className="btn btn-primary btn-sm"
+                  disabled={aiGenerating || !aiSkillName.trim()}
+                  style={{ display: 'flex', alignItems: 'center', gap: '6px', backgroundColor: '#3B5BDB' }}
+                >
+                  {aiGenerating ? (
+                    <>
+                      <Loader2 size={14} className="animate-spin" /> Generating Assessment...
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles size={14} /> Generate & Save Assessment
+                    </>
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Manual Create Assessment Modal */}
       {showCreateModal && (
         <div className="modal-overlay">
           <div className="modal-content">

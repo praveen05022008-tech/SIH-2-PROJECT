@@ -4,6 +4,7 @@ import { useAuth } from '../../context/AuthContext';
 import { api } from '../../services/api';
 import { PortalLayout } from '../../components/layout/PortalLayout';
 import { Briefcase, Users, UserCheck, GraduationCap, Plus, ArrowRight } from 'lucide-react';
+import { LoadingSpinner } from '../../components/common/LoadingSpinner';
 
 export function IndustryDashboard() {
   const { user } = useAuth();
@@ -79,7 +80,7 @@ export function IndustryDashboard() {
           </div>
 
           {loading ? (
-            <p className="text-muted">Loading postings...</p>
+            <LoadingSpinner message="Loading postings..." />
           ) : metrics.opportunities_breakdown?.length === 0 ? (
             <div style={{ textAlign: 'center', padding: '30px 0' }}>
               <p className="text-muted">No opportunities posted yet.</p>

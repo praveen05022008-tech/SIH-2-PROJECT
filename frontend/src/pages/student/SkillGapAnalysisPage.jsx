@@ -1,7 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../../services/api';
 import { PortalLayout } from '../../components/layout/PortalLayout';
-import { Compass, CheckCircle2, AlertTriangle, XCircle, BookOpen, ArrowRight } from 'lucide-react';
+import { useToast } from '../../context/ToastContext';
+import { LoadingSpinner } from '../../components/common/LoadingSpinner';
+
+import { Compass, CheckCircle2, AlertCircle, BookOpen, ArrowRight, Sparkles, Loader2, Calendar, Target, ShieldCheck } from 'lucide-react';
+import { AICareerCounselor } from '../../components/AICareerCounselor';
 
 export function SkillGapAnalysisPage() {
   const [careerRoles, setCareerRoles] = useState([]);
@@ -10,12 +14,19 @@ export function SkillGapAnalysisPage() {
   const [loading, setLoading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
 
+  // AI Roadmap State
+  const [customRoleInput, setCustomRoleInput] = useState('');
+  const [careerInterests, setCareerInterests] = useState('');
+  const [aiRoadmap, setAiRoadmap] = useState(null);
+  const [aiLoading, setAiLoading] = useState(false);
+
   useEffect(() => {
     api.get('/skills/career-roles')
       .then((roles) => {
         setCareerRoles(roles);
         if (roles.length > 0) {
           setSelectedRoleId(roles[0].id);
+          setCustomRoleInput(roles[0].title);
           runAnalysis(roles[0].id);
         }
       })
@@ -36,26 +47,49 @@ export function SkillGapAnalysisPage() {
   const handleRoleChange = (e) => {
     const rId = e.target.value;
     setSelectedRoleId(rId);
+    const selected = careerRoles.find(r => String(r.id) === String(rId));
+    if (selected) setCustomRoleInput(selected.title);
     runAnalysis(rId);
   };
 
+  const toast = useToast();
+
+  const generateAIRoadmap = async () => {
+    const target = customRoleInput.trim() || (analysis ? analysis.career_role : 'Software Engineer');
+    setAiLoading(true);
+    try {
+      const res = await api.post('/ai/skill-gap-roadmap', {
+        target_role: target,
+        interests: careerInterests
+      });
+      setAiRoadmap(res);
+      toast.success(`Generated 4-Week AI Career Roadmap for '${target}'.`);
+    } catch (err) {
+      toast.error('Failed to generate AI roadmap: ' + err.message);
+    } finally {
+      setAiLoading(false);
+    }
+  };
+
   return (
-    <PortalLayout title="Skill Gap Analysis" allowedRoles={['student']}>
+    <PortalLayout title="Skill Gap & AI Career Roadmap" allowedRoles={['student']}>
+      {/* Top Selector Card */}
       <div className="card" style={{ marginBottom: '20px' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px' }}>
           <div>
-            <h3 className="card-title">Select Targeted Career Pathway</h3>
+            <h3 className="card-title">Target Industry Career Pathway</h3>
             <p className="text-muted" style={{ fontSize: '13px' }}>
-              Compare your validated skills against industry-defined competencies
+              Compare your validated skills against industry-defined standards or generate a tailored Groq AI roadmap.
             </p>
           </div>
 
-          <div style={{ minWidth: '280px' }}>
+          <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
             <select
               className="form-control"
               value={selectedRoleId}
               onChange={handleRoleChange}
               disabled={initialLoading}
+              style={{ minWidth: '240px' }}
             >
               {careerRoles.map((r) => (
                 <option key={r.id} value={r.id}>
@@ -63,19 +97,98 @@ export function SkillGapAnalysisPage() {
                 </option>
               ))}
             </select>
+
+            <button
+              onClick={generateAIRoadmap}
+              disabled={aiLoading}
+              className="btn btn-primary"
+              style={{ display: 'flex', alignItems: 'center', gap: '8px', backgroundColor: '#3B5BDB' }}
+            >
+              <Sparkles size={16} />
+              {aiLoading ? 'Generating AI Roadmap...' : 'Generate Groq AI Roadmap'}
+            </button>
           </div>
         </div>
       </div>
 
+      {/* AI Roadmap Display if Generated */}
+      {aiRoadmap && (
+        <div className="card" style={{ marginBottom: '24px', border: '2px solid #3B5BDB', backgroundColor: '#F8FAFC' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px', marginBottom: '16px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <div style={{ backgroundColor: '#3B5BDB', padding: '8px', borderRadius: '8px' }}>
+                <Sparkles size={20} color="#fff" />
+              </div>
+              <div>
+                <h3 style={{ fontSize: '18px', color: '#1E2A44', margin: 0 }}>
+                  Groq AI 4-Week Career Roadmap: {customRoleInput}
+                </h3>
+                <span style={{ fontSize: '12px', color: '#64748B' }}>Personalized strategic roadmap based on your profile telemetry</span>
+              </div>
+            </div>
+            <div style={{ textAlign: 'right' }}>
+              <span className="badge badge-primary" style={{ fontSize: '13px', padding: '6px 12px' }}>
+                AI Readiness: {aiRoadmap.overall_readiness_score}%
+              </span>
+            </div>
+          </div>
+
+          <p style={{ fontSize: '14px', color: '#334155', lineHeight: '1.5', marginBottom: '18px', padding: '12px', backgroundColor: '#ffffff', borderRadius: '6px', border: '1px solid #E2E8F0' }}>
+            <strong>Strategic Summary:</strong> {aiRoadmap.summary}
+          </p>
+
+          {/* 4-Week Cards */}
+          {aiRoadmap.four_week_roadmap && aiRoadmap.four_week_roadmap.length > 0 && (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '14px', marginBottom: '16px' }}>
+              {aiRoadmap.four_week_roadmap.map((week, idx) => (
+                <div key={idx} style={{ backgroundColor: '#ffffff', border: '1px solid #CBD5E1', borderRadius: '8px', padding: '16px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+                    <span style={{ fontWeight: 700, color: '#3B5BDB', fontSize: '13px' }}>{week.week || `Week ${idx + 1}`}</span>
+                    {week.estimated_hours && (
+                      <span style={{ fontSize: '11px', color: '#64748B', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        <Clock size={12} /> {week.estimated_hours} hrs
+                      </span>
+                    )}
+                  </div>
+                  <h4 style={{ fontSize: '14px', color: '#1E293B', marginBottom: '8px' }}>{week.focus_theme}</h4>
+                  
+                  {week.action_items && (
+                    <ul style={{ paddingLeft: '18px', fontSize: '12.5px', color: '#475569', marginBottom: '8px' }}>
+                      {Array.isArray(week.action_items) ? week.action_items.map((act, aIdx) => (
+                        <li key={aIdx}>{act}</li>
+                      )) : <li>{week.action_items}</li>}
+                    </ul>
+                  )}
+
+                  {week.recommended_projects && (
+                    <div style={{ fontSize: '12px', backgroundColor: '#F1F5F9', padding: '8px', borderRadius: '4px', color: '#0F172A' }}>
+                      <strong>Project:</strong> {Array.isArray(week.recommended_projects) ? week.recommended_projects.join(', ') : week.recommended_projects}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+
+          {aiRoadmap.industry_advice && (
+            <div style={{ backgroundColor: '#EFF6FF', borderLeft: '4px solid #3B5BDB', padding: '12px', borderRadius: '4px', fontSize: '13px', color: '#1E3A8A' }}>
+              <strong>Industry Mentor Advice:</strong> {aiRoadmap.industry_advice}
+            </div>
+          )}
+        </div>
+      )}
+
       {loading ? (
-        <p className="text-muted">Analyzing skill competencies from database records...</p>
+        <div className="card" style={{ padding: '36px', display: 'flex', justifyContent: 'center' }}>
+          <LoadingSpinner message="Analyzing skill competencies from TiDB records..." />
+        </div>
       ) : analysis ? (
         <div>
           {/* Readiness Score Card */}
-          <div className="card" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '24px' }}>
+          <div className="card" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '24px', marginBottom: '20px' }}>
             <div>
               <span className="text-muted" style={{ fontSize: '12px', textTransform: 'uppercase', fontWeight: 600 }}>
-                Pathway Readiness
+                Standard Pathway Readiness
               </span>
               <h2 style={{ fontSize: '22px', color: '#1E2A44', marginTop: '4px' }}>
                 {analysis.career_role}
@@ -188,6 +301,9 @@ export function SkillGapAnalysisPage() {
           <p className="text-muted">No career roles available in the ontology yet.</p>
         </div>
       )}
+
+      {/* Floating AI Counselor */}
+      <AICareerCounselor />
     </PortalLayout>
   );
 }

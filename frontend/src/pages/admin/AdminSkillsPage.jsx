@@ -1,7 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../../services/api';
 import { PortalLayout } from '../../components/layout/PortalLayout';
+import { useToast } from '../../context/ToastContext';
+
 import { Award, Plus } from 'lucide-react';
+import { LoadingSpinner } from '../../components/common/LoadingSpinner';
 
 export function AdminSkillsPage() {
   const [skills, setSkills] = useState([]);
@@ -35,6 +38,8 @@ export function AdminSkillsPage() {
     setLoading(false);
   };
 
+  const toast = useToast();
+
   const handleCreateCategory = async (e) => {
     e.preventDefault();
     try {
@@ -42,8 +47,9 @@ export function AdminSkillsPage() {
       setCatName('');
       setCatDesc('');
       fetchData();
+      toast.success('Skill category created.');
     } catch (err) {
-      alert('Error creating category: ' + err.message);
+      toast.error('Error creating category: ' + err.message);
     }
   };
 
@@ -60,8 +66,9 @@ export function AdminSkillsPage() {
       setSkillCatId('');
       setSkillDesc('');
       fetchData();
+      toast.success(`Skill '${skillName}' registered in ontology.`);
     } catch (err) {
-      alert('Error creating skill: ' + err.message);
+      toast.error('Error creating skill: ' + err.message);
     }
   };
 
@@ -76,7 +83,7 @@ export function AdminSkillsPage() {
           </div>
 
           {loading ? (
-            <p className="text-muted">Loading skill taxonomy...</p>
+            <LoadingSpinner message="Loading skill taxonomy..." />
           ) : skills.length === 0 ? (
             <p className="text-muted" style={{ padding: '24px 0' }}>No skills in the catalog yet. Populate categories and skills using the authoring forms.</p>
           ) : (

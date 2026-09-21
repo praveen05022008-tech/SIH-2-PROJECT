@@ -1,7 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../../services/api';
 import { PortalLayout } from '../../components/layout/PortalLayout';
+import { useToast } from '../../context/ToastContext';
+import { getDocumentViewUrl } from '../../utils/fileUrl';
 import { ShieldCheck, CheckCircle2, XCircle, FileText, ExternalLink } from 'lucide-react';
+import { LoadingSpinner } from '../../components/common/LoadingSpinner';
 
 export function DocumentVerificationPage() {
   const [documents, setDocuments] = useState([]);
@@ -23,6 +26,8 @@ export function DocumentVerificationPage() {
       .finally(() => setLoading(false));
   };
 
+  const toast = useToast();
+
   const handleVerify = async (e) => {
     e.preventDefault();
     if (!selectedDoc) return;
@@ -36,8 +41,9 @@ export function DocumentVerificationPage() {
       setSelectedDoc(null);
       setRemarks('');
       fetchDocuments();
+      toast.success(`Document '${selectedDoc.title}' marked as ${verStatus}.`);
     } catch (err) {
-      alert('Error: ' + err.message);
+      toast.error('Error: ' + err.message);
     } finally {
       setSubmitting(false);
     }
@@ -55,7 +61,7 @@ export function DocumentVerificationPage() {
         </div>
 
         {loading ? (
-          <p className="text-muted">Loading documents queue...</p>
+          <LoadingSpinner message="Loading documents queue..." />
         ) : documents.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '36px 0' }}>
             <FileText size={36} color="#94A3B8" style={{ margin: '0 auto 12px' }} />
@@ -88,7 +94,7 @@ export function DocumentVerificationPage() {
                     </td>
                     <td>{new Date(doc.uploaded_at).toLocaleDateString()}</td>
                     <td>
-                      <a href={doc.file_path} target="_blank" rel="noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '12px' }}>
+                      <a href={getDocumentViewUrl(doc)} target="_blank" rel="noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '12px' }}>
                         <ExternalLink size={13} /> View File
                       </a>
                     </td>
@@ -116,7 +122,7 @@ export function DocumentVerificationPage() {
               <div>Owner: <strong>{selectedDoc.owner_name}</strong></div>
               <div>Type: <span className="badge badge-neutral">{selectedDoc.document_type}</span></div>
               <div style={{ marginTop: '6px' }}>
-                <a href={selectedDoc.file_path} target="_blank" rel="noreferrer" className="btn btn-outline btn-sm">
+                <a href={getDocumentViewUrl(selectedDoc)} target="_blank" rel="noreferrer" className="btn btn-outline btn-sm">
                   <ExternalLink size={13} /> Inspect Document File
                 </a>
               </div>

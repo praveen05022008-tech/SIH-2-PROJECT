@@ -1,7 +1,23 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../../services/api';
 import { PortalLayout } from '../../components/layout/PortalLayout';
-import { FolderGit2, Plus, Trash2, Globe, Code, Share2, ExternalLink, Award } from 'lucide-react';
+import { useToast } from '../../context/ToastContext';
+import { getDocumentViewUrl } from '../../utils/fileUrl';
+import {
+  FolderGit2,
+  FileText,
+  Award,
+  Plus,
+  Trash2,
+  Upload,
+  ExternalLink,
+  Code,
+  ShieldCheck,
+  CheckCircle2,
+  Clock,
+  XCircle,
+  Sparkles
+} from 'lucide-react';
 
 export function StudentPortfolioPage() {
   const [portfolio, setPortfolio] = useState({
@@ -13,6 +29,7 @@ export function StudentPortfolioPage() {
     certifications: []
   });
 
+  const [documents, setDocuments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [savingBio, setSavingBio] = useState(false);
   
@@ -30,8 +47,16 @@ export function StudentPortfolioPage() {
   const [certOrg, setCertOrg] = useState('');
   const [certCredId, setCertCredId] = useState('');
 
+  // Document Upload State
+  const [showDocModal, setShowDocModal] = useState(false);
+  const [docTitle, setDocTitle] = useState('');
+  const [docType, setDocType] = useState('resume');
+  const [docFile, setDocFile] = useState(null);
+  const [uploadingDoc, setUploadingDoc] = useState(false);
+
   useEffect(() => {
     fetchPortfolio();
+    fetchDocuments();
   }, []);
 
   const fetchPortfolio = () => {
@@ -41,6 +66,14 @@ export function StudentPortfolioPage() {
       .catch(() => {})
       .finally(() => setLoading(false));
   };
+
+  const fetchDocuments = () => {
+    api.get('/documents')
+      .then((data) => setDocuments(data))
+      .catch(() => {});
+  };
+
+  const toast = useToast();
 
   const handleUpdateBio = async (e) => {
     e.preventDefault();
@@ -52,9 +85,9 @@ export function StudentPortfolioPage() {
         linkedin_url: portfolio.linkedin_url,
         website_url: portfolio.website_url,
       });
-      alert('Portfolio links updated.');
+      toast.success('Portfolio links updated successfully.');
     } catch (err) {
-      alert('Failed to update: ' + err.message);
+      toast.error('Failed to update: ' + err.message);
     } finally {
       setSavingBio(false);
     }
@@ -77,8 +110,9 @@ export function StudentPortfolioPage() {
       setProjUrl('');
       setProjRepo('');
       fetchPortfolio();
+      toast.success('Project added to portfolio.');
     } catch (err) {
-      alert('Error creating project: ' + err.message);
+      toast.error('Error creating project: ' + err.message);
     }
   };
 
@@ -87,8 +121,9 @@ export function StudentPortfolioPage() {
     try {
       await api.delete(`/portfolios/projects/${id}`);
       fetchPortfolio();
+      toast.success('Project removed.');
     } catch (err) {
-      alert('Error deleting: ' + err.message);
+      toast.error('Error deleting: ' + err.message);
     }
   };
 
@@ -105,13 +140,40 @@ export function StudentPortfolioPage() {
       setCertOrg('');
       setCertCredId('');
       fetchPortfolio();
+      toast.success('Certification registered.');
     } catch (err) {
-      alert('Error adding certification: ' + err.message);
+      toast.error('Error adding certification: ' + err.message);
+    }
+  };
+
+  const handleUploadDocument = async (e) => {
+    e.preventDefault();
+    if (!docFile) {
+      toast.warning('Please select a file to upload.');
+      return;
+    }
+    setUploadingDoc(true);
+    const formData = new FormData();
+    formData.append('title', docTitle);
+    formData.append('document_type', docType);
+    formData.append('file', docFile);
+
+    try {
+      await api.post('/documents/upload', formData);
+      setShowDocModal(false);
+      setDocTitle('');
+      setDocFile(null);
+      fetchDocuments();
+      toast.success('Document securely uploaded to Cloudinary.');
+    } catch (err) {
+      toast.error('Upload failed: ' + err.message);
+    } finally {
+      setUploadingDoc(false);
     }
   };
 
   return (
-    <PortalLayout title="Digital Portfolio" allowedRoles={['student']}>
+    <PortalLayout title="Digital Portfolio & Cloudinary Credentials" allowedRoles={['student']}>
       {/* Portfolio Info & Links */}
       <div className="card" style={{ marginBottom: '24px' }}>
         <div className="card-header">
@@ -128,7 +190,7 @@ export function StudentPortfolioPage() {
             />
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '16px' }}>
             <div className="form-group">
               <label className="form-label">GitHub URL</label>
               <input
@@ -165,6 +227,50 @@ export function StudentPortfolioPage() {
             {savingBio ? 'Saving...' : 'Save Portfolio Links'}
           </button>
         </form>
+      </div>
+
+      {/* Cloudinary Verified Documents & Resumes */}
+      <div className="card" style={{ marginBottom: '24px' }}>
+        <div className="card-header">
+          <div>
+            <h3 className="card-title">Cloudinary Stored Credentials & Resumes</h3>
+            <p className="text-muted" style={{ fontSize: '12px' }}>Secure cloud storage for resumes, transcripts, and verified certificates</p>
+          </div>
+          <button onClick={() => setShowDocModal(true)} className="btn btn-secondary btn-sm">
+            <Upload size={13} /> Upload Document
+          </button>
+        </div>
+
+        {documents.length === 0 ? (
+          <p className="text-muted" style={{ fontSize: '13px' }}>No documents uploaded yet. Upload your resume or certificate to Cloudinary.</p>
+        ) : (
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '16px' }}>
+            {documents.map((doc) => (
+              <div key={doc.id} style={{ border: '1px solid #E2E5EA', borderRadius: '6px', padding: '16px', backgroundColor: '#F8FAFC' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <FileText size={18} color="#3B5BDB" />
+                    <h4 style={{ fontSize: '14.5px', color: '#1E2A44', margin: 0 }}>{doc.title}</h4>
+                  </div>
+                  <span className={`badge ${doc.verification_status === 'verified' ? 'badge-success' : 'badge-neutral'}`} style={{ textTransform: 'capitalize' }}>
+                    {doc.verification_status}
+                  </span>
+                </div>
+                <p className="text-muted" style={{ fontSize: '12px', marginBottom: '10px' }}>
+                  Type: <strong style={{ textTransform: 'capitalize' }}>{doc.document_type}</strong> • Size: {Math.round(doc.file_size / 1024)} KB
+                </p>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ fontSize: '11px', color: '#64748B' }}>
+                    {new Date(doc.uploaded_at).toLocaleDateString()}
+                  </span>
+                  <a href={getDocumentViewUrl(doc)} target="_blank" rel="noreferrer" className="btn btn-outline btn-sm" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                    <ExternalLink size={12} /> View File
+                  </a>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Projects Section */}
@@ -249,6 +355,43 @@ export function StudentPortfolioPage() {
           </div>
         )}
       </div>
+
+      {/* Upload Document Modal */}
+      {showDocModal && (
+        <div className="modal-overlay">
+          <div className="modal-content">
+            <div className="card-header">
+              <h3 className="card-title">Upload Document to Cloudinary</h3>
+              <button onClick={() => setShowDocModal(false)} className="btn btn-outline btn-sm">Close</button>
+            </div>
+            <form onSubmit={handleUploadDocument}>
+              <div className="form-group">
+                <label className="form-label">Document Title *</label>
+                <input type="text" className="form-control" placeholder="e.g. Master Resume 2026, AWS Certificate" value={docTitle} onChange={(e) => setDocTitle(e.target.value)} required />
+              </div>
+              <div className="form-group">
+                <label className="form-label">Document Type *</label>
+                <select className="form-control" value={docType} onChange={(e) => setDocType(e.target.value)}>
+                  <option value="resume">Resume / CV</option>
+                  <option value="certificate">Certification</option>
+                  <option value="transcript">Academic Transcript</option>
+                  <option value="other">Other Academic Credential</option>
+                </select>
+              </div>
+              <div className="form-group">
+                <label className="form-label">Select File (PDF, PNG, JPG, DOCX) *</label>
+                <input type="file" className="form-control" onChange={(e) => setDocFile(e.target.files[0])} required />
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '16px' }}>
+                <button type="button" onClick={() => setShowDocModal(false)} className="btn btn-outline btn-sm" disabled={uploadingDoc}>Cancel</button>
+                <button type="submit" className="btn btn-primary btn-sm" disabled={uploadingDoc}>
+                  {uploadingDoc ? 'Uploading to Cloudinary...' : 'Upload File'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* Add Project Modal */}
       {showProjectModal && (

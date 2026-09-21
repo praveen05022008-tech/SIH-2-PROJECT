@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../../services/api';
 import { PortalLayout } from '../../components/layout/PortalLayout';
+import { LoadingSpinner } from '../../components/common/LoadingSpinner';
 import { FileCheck, Building, Clock, ArrowRight } from 'lucide-react';
 
 export function StudentApplicationsPage() {
@@ -42,7 +43,7 @@ export function StudentApplicationsPage() {
         </div>
 
         {loading ? (
-          <p className="text-muted">Loading your application records...</p>
+          <LoadingSpinner message="Loading your application records..." />
         ) : applications.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '36px 0' }}>
             <FileCheck size={36} color="#94A3B8" style={{ margin: '0 auto 12px' }} />

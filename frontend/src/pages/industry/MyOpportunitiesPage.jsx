@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { api } from '../../services/api';
 import { PortalLayout } from '../../components/layout/PortalLayout';
 import { Briefcase, Plus, Users, MapPin } from 'lucide-react';
+import { LoadingSpinner } from '../../components/common/LoadingSpinner';
 
 export function MyOpportunitiesPage() {
   const [opportunities, setOpportunities] = useState([]);
@@ -34,7 +35,7 @@ export function MyOpportunitiesPage() {
         </div>
 
         {loading ? (
-          <p className="text-muted">Loading your postings...</p>
+          <LoadingSpinner message="Loading your postings..." />
         ) : opportunities.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '36px 0' }}>
             <Briefcase size={36} color="#94A3B8" style={{ margin: '0 auto 12px' }} />

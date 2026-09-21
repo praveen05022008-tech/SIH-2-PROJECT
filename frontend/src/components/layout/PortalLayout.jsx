@@ -3,14 +3,15 @@ import { Navigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { Sidebar } from './Sidebar';
 import { TopNav } from './TopNav';
+import { LoadingSpinner } from '../common/LoadingSpinner';
 
 export function PortalLayout({ children, title, allowedRoles }) {
   const { user, loading } = useAuth();
 
   if (loading) {
     return (
-      <div style={{ display: 'flex', height: '100vh', alignItems: 'center', justifyContent: 'center' }}>
-        <p style={{ color: '#1E2A44', fontWeight: 600 }}>Loading Portal...</p>
+      <div style={{ display: 'flex', height: '100vh', alignItems: 'center', justifyContent: 'center', backgroundColor: '#F8FAFC' }}>
+        <LoadingSpinner size="lg" message="Initializing Collaboration Portal..." />
       </div>
     );
   }

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { api } from '../../services/api';
 import { PortalLayout } from '../../components/layout/PortalLayout';
 import { CheckCircle, AlertCircle } from 'lucide-react';
+import { LoadingSpinner } from '../../components/common/LoadingSpinner';
 
 export function IndustryProfilePage() {
   const [profile, setProfile] = useState({
@@ -53,6 +54,14 @@ export function IndustryProfilePage() {
       setSaving(false);
     }
   };
+
+  if (loading) {
+    return (
+      <PortalLayout title="Company Profile" allowedRoles={['industry']}>
+        <LoadingSpinner message="Loading Enterprise Profile..." />
+      </PortalLayout>
+    );
+  }
 
   return (
     <PortalLayout title="Company Profile" allowedRoles={['industry']}>

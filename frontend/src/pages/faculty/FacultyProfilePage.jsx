@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { api } from '../../services/api';
 import { PortalLayout } from '../../components/layout/PortalLayout';
 import { CheckCircle, AlertCircle } from 'lucide-react';
+import { LoadingSpinner } from '../../components/common/LoadingSpinner';
 
 export function FacultyProfilePage() {
   const [profile, setProfile] = useState({
@@ -49,6 +50,14 @@ export function FacultyProfilePage() {
       setSaving(false);
     }
   };
+
+  if (loading) {
+    return (
+      <PortalLayout title="Faculty Profile" allowedRoles={['faculty']}>
+        <LoadingSpinner message="Loading Academician Credentials..." />
+      </PortalLayout>
+    );
+  }
 
   return (
     <PortalLayout title="Faculty Profile" allowedRoles={['faculty']}>

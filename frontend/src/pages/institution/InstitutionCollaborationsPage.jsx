@@ -1,9 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../../services/api';
 import { PortalLayout } from '../../components/layout/PortalLayout';
+import { useToast } from '../../context/ToastContext';
 import { Building2, CheckCircle2, XCircle } from 'lucide-react';
+import { LoadingSpinner } from '../../components/common/LoadingSpinner';
 
 export function InstitutionCollaborationsPage() {
+  const toast = useToast();
   const [collaborations, setCollaborations] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -22,9 +25,10 @@ export function InstitutionCollaborationsPage() {
   const handleUpdateStatus = async (id, status) => {
     try {
       await api.put(`/collaborations/${id}/status`, { status });
+      toast.success(`Collaboration proposal ${status} successfully.`);
       fetchCollaborations();
     } catch (err) {
-      alert('Error updating status: ' + err.message);
+      toast.error('Error updating status: ' + err.message);
     }
   };
 
@@ -40,7 +44,7 @@ export function InstitutionCollaborationsPage() {
         </div>
 
         {loading ? (
-          <p className="text-muted">Loading collaboration records...</p>
+          <LoadingSpinner message="Loading collaboration records..." />
         ) : collaborations.length === 0 ? (
           <p className="text-muted" style={{ padding: '30px 0' }}>No partnership proposals currently awaiting review.</p>
         ) : (

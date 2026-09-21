@@ -1,7 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../../services/api';
 import { PortalLayout } from '../../components/layout/PortalLayout';
+import { useToast } from '../../context/ToastContext';
+
 import { Building2, Plus, Send } from 'lucide-react';
+import { LoadingSpinner } from '../../components/common/LoadingSpinner';
 
 export function IndustryCollaborationsPage() {
   const [collaborations, setCollaborations] = useState([]);
@@ -47,8 +50,9 @@ export function IndustryCollaborationsPage() {
       setTerms('');
       setTargetInstId('');
       fetchCollaborations();
+      toast.success('Collaboration proposal submitted to institution.');
     } catch (err) {
-      alert('Error: ' + err.message);
+      toast.error('Error: ' + err.message);
     } finally {
       setSubmitting(false);
     }
@@ -68,7 +72,7 @@ export function IndustryCollaborationsPage() {
         </div>
 
         {loading ? (
-          <p className="text-muted">Loading collaboration proposals...</p>
+          <LoadingSpinner message="Loading collaboration proposals..." />
         ) : collaborations.length === 0 ? (
           <p className="text-muted" style={{ padding: '24px 0' }}>No active partnerships recorded.</p>
         ) : (

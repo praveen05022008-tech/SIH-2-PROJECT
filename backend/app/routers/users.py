@@ -15,6 +15,7 @@ router = APIRouter(prefix="/users", tags=["Users & Organizations"])
 def get_users(
     role: Optional[str] = None,
     is_approved: Optional[bool] = None,
+    is_active: Optional[bool] = None,
     institution_id: Optional[int] = None,
     current_user: User = Depends(require_role(["admin", "institution"])),
     db: Session = Depends(get_db)
@@ -33,6 +34,8 @@ def get_users(
         query = query.filter(User.role == role)
     if is_approved is not None:
         query = query.filter(User.is_approved == is_approved)
+    if is_active is not None:
+        query = query.filter(User.is_active == is_active)
         
     return query.order_by(User.created_at.desc()).all()
 
@@ -50,11 +53,14 @@ def update_user_approval(
     user.is_approved = data.is_approved
     if data.is_active is not None:
         user.is_active = data.is_active
+    elif not data.is_approved:
+        # If rejecting approval, default is_active to False to remove from active pending queue
+        user.is_active = False
         
     db.commit()
     db.refresh(user)
     
-    status_str = "approved" if user.is_approved else "rejected/pending"
+    status_str = "approved" if user.is_approved else ("rejected" if not user.is_active else "pending")
     send_notification(
         db=db,
         user_id=user.id,
@@ -69,10 +75,37 @@ def update_user_approval(
         user_id=current_user.id,
         resource_type="USER",
         resource_id=str(user.id),
-        details={"approved": user.is_approved}
+        details={"approved": user.is_approved, "active": user.is_active}
     )
     
     return user
+
+@router.delete("/{user_id}")
+def delete_user(
+    user_id: int,
+    current_user: User = Depends(require_role(["admin"])),
+    db: Session = Depends(get_db)
+):
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+        
+    if user.id == current_user.id:
+        raise HTTPException(status_code=400, detail="Cannot delete your own administrator account")
+        
+    db.delete(user)
+    db.commit()
+    
+    log_audit(
+        db=db,
+        action="DELETE_USER",
+        user_id=current_user.id,
+        resource_type="USER",
+        resource_id=str(user_id),
+        details={"deleted_user": user.username}
+    )
+    
+    return {"message": "User account deleted successfully"}
 
 @router.get("/institutions", response_model=List[InstitutionResponse])
 def get_institutions(db: Session = Depends(get_db)):

@@ -475,3 +475,29 @@ textarea.form-control {
     padding: 0 16px;
   }
 }
+
+/* Circular Progress Spinner Keyframes */
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes circular-dash {
+  0% {
+    stroke-dashoffset: 80;
+    transform: rotate(0deg);
+  }
+  50% {
+    stroke-dashoffset: 20;
+    transform: rotate(135deg);
+  }
+  100% {
+    stroke-dashoffset: 80;
+    transform: rotate(360deg);
+  }
+}
+

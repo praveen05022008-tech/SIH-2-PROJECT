@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../../services/api';
 import { PortalLayout } from '../../components/layout/PortalLayout';
+import { LoadingSpinner } from '../../components/common/LoadingSpinner';
 import { FileText, Star } from 'lucide-react';
 
 export function MentorFeedbackPage() {
@@ -49,7 +50,7 @@ export function MentorFeedbackPage() {
         </div>
 
         {loading ? (
-          <p className="text-muted">Loading supervisor evaluations...</p>
+          <LoadingSpinner message="Loading supervisor evaluations..." />
         ) : allFeedbacks.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '36px 0' }}>
             <FileText size={36} color="#94A3B8" style={{ margin: '0 auto 12px' }} />
