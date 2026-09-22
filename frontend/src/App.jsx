@@ -78,12 +78,12 @@ export default function App() {
           <Route path="/student/dashboard" element={<StudentDashboard />} />
           <Route path="/student/profile" element={<StudentProfilePage />} />
           <Route path="/student/assessments" element={<StudentAssessmentsPage />} />
-          <Route path="/student/assessment-results" element={<AssessmentResultsPage />} />
+          <Route path="/student/assessment-results" element={<Navigate to="/student/assessments" replace />} />
           <Route path="/student/skills" element={<StudentSkillsPage />} />
           <Route path="/student/gap-analysis" element={<SkillGapAnalysisPage />} />
           <Route path="/student/opportunities" element={<StudentOpportunitiesPage />} />
           <Route path="/student/applications" element={<StudentApplicationsPage />} />
-          <Route path="/student/portfolio" element={<StudentPortfolioPage />} />
+          <Route path="/student/portfolio" element={<Navigate to="/student/profile?tab=portfolio" replace />} />
           <Route path="/student/internship-progress" element={<InternshipProgressPage />} />
           <Route path="/student/mentor-feedback" element={<MentorFeedbackPage />} />
           <Route path="/student/learning-programs" element={<StudentLearningPage />} />

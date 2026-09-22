@@ -37,14 +37,12 @@ export function Sidebar() {
       case 'student':
         return [
           { to: '/student/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-          { to: '/student/profile', label: 'My Profile', icon: UserCheck },
+          { to: '/student/profile', label: 'My Profile & Portfolio', icon: UserCheck },
           { to: '/student/assessments', label: 'Skill Assessments', icon: Award },
-          { to: '/student/assessment-results', label: 'Assessment Results', icon: CheckCircle2 },
           { to: '/student/skills', label: 'My Skills & Profile', icon: TrendingUp },
           { to: '/student/gap-analysis', label: 'Skill Gap Analysis', icon: Compass },
           { to: '/student/opportunities', label: 'Internships & Jobs', icon: Briefcase },
           { to: '/student/applications', label: 'My Applications', icon: FileCheck },
-          { to: '/student/portfolio', label: 'Digital Portfolio', icon: FolderGit2 },
           { to: '/student/internship-progress', label: 'Internship Progress', icon: GraduationCap },
           { to: '/student/mentor-feedback', label: 'Mentor Feedback', icon: FileText },
           { to: '/student/learning-programs', label: 'Learning Programs', icon: BookOpen },
