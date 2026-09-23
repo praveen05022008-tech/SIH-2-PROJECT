@@ -200,7 +200,7 @@ export function SkillGapAnalysisPage() {
       ) : analysis ? (
         <div>
           {/* Readiness Score Card */}
-          <div className="card" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '24px', marginBottom: '20px' }}>
+          <div className="card" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: 'clamp(16px, 3vw, 24px)', marginBottom: '20px', flexWrap: 'wrap', gap: '14px' }}>
             <div>
               <span className="text-muted" style={{ fontSize: '12px', textTransform: 'uppercase', fontWeight: 600 }}>
                 Standard Pathway Readiness

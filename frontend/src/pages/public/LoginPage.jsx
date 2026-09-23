@@ -124,17 +124,17 @@ export function LoginPage() {
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', backgroundColor: '#F5F6F8' }}>
       <PublicHeader />
 
-      <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '40px 20px' }}>
+      <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px 14px' }}>
         <div style={{
           display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))',
-          gap: '28px',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 320px), 1fr))',
+          gap: '24px',
           maxWidth: '960px',
           width: '100%',
           alignItems: 'start'
         }}>
           {/* Main Login Form Card */}
-          <div className="card" style={{ padding: '32px' }}>
+          <div className="card" style={{ padding: 'clamp(18px, 4vw, 32px)' }}>
             <div style={{ marginBottom: '24px' }}>
               <h2 style={{ fontSize: '22px', color: '#1E2A44', marginBottom: '6px', fontWeight: 700 }}>
                 Portal Authentication

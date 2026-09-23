@@ -40,6 +40,10 @@ env/
 *.sqlite3
 backend/aic_portal.db
 
+# Uploads & local media
+uploads/
+backend/uploads/
+
 # Node & Frontend dependencies
 node_modules/
 frontend/node_modules/

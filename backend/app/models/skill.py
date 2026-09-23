@@ -46,7 +46,7 @@ class StudentSkill(Base):
     student = relationship(
         "StudentProfile",
         primaryjoin="foreign(StudentSkill.student_id) == StudentProfile.id",
-        back_populates="skills",
+        back_populates="student_skills",
     )
     skill = relationship(
         "Skill",

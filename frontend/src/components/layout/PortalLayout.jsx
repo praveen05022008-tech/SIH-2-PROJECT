@@ -1,5 +1,5 @@
-import React from 'react';
-import { Navigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { Sidebar } from './Sidebar';
 import { TopNav } from './TopNav';
@@ -7,6 +7,13 @@ import { LoadingSpinner } from '../common/LoadingSpinner';
 
 export function PortalLayout({ children, title, allowedRoles }) {
   const { user, loading } = useAuth();
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+  const location = useLocation();
+
+  // Close mobile drawer on route change
+  useEffect(() => {
+    setMobileSidebarOpen(false);
+  }, [location.pathname]);
 
   if (loading) {
     return (
@@ -26,9 +33,9 @@ export function PortalLayout({ children, title, allowedRoles }) {
 
   return (
     <div className="app-container">
-      <Sidebar />
+      <Sidebar isOpen={mobileSidebarOpen} onClose={() => setMobileSidebarOpen(false)} />
       <div className="main-content">
-        <TopNav title={title} />
+        <TopNav title={title} onToggleMobileSidebar={() => setMobileSidebarOpen((prev) => !prev)} />
         <main className="page-body">
           {!user.is_approved && user.role !== 'admin' && (
             <div style={{

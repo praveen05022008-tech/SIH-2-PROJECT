@@ -57,8 +57,8 @@ export function RegisterPage() {
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', backgroundColor: '#F5F6F8' }}>
       <PublicHeader />
 
-      <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '40px 16px' }}>
-        <div className="card" style={{ maxWidth: '640px', width: '100%', padding: '32px' }}>
+      <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px 12px' }}>
+        <div className="card" style={{ maxWidth: '640px', width: '100%', padding: 'clamp(16px, 4vw, 32px)' }}>
           <div style={{ textAlign: 'center', marginBottom: '20px' }}>
             <h2 style={{ fontSize: '20px', color: '#1E2A44', marginBottom: '6px' }}>Stakeholder Registration</h2>
             <p className="text-muted" style={{ fontSize: '13px' }}>
@@ -102,7 +102,7 @@ export function RegisterPage() {
           ) : (
             <>
               {/* Role Selection Tabs */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '20px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 220px), 1fr))', gap: '10px', marginBottom: '20px' }}>
                 {[
                   { id: 'industry', label: 'Industry & Enterprise', icon: Building2, desc: 'Post internships, hire students & fund R&D' },
                   { id: 'institution', label: 'Academic Institution', icon: Landmark, desc: 'Manage departments, students & faculty' },

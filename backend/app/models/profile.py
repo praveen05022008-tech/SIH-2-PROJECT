@@ -23,6 +23,7 @@ class StudentProfile(Base):
     career_interests = Column(Text, nullable=True)  # JSON or comma-separated
     preferred_roles = Column(Text, nullable=True)
     preferred_locations = Column(Text, nullable=True)
+    skills = Column(Text, nullable=True)  # Extracted / technical skills mapped from resume
     resume_url = Column(String(500), nullable=True)
     profile_photo_url = Column(String(500), nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
@@ -31,7 +32,7 @@ class StudentProfile(Base):
     user = relationship("User", back_populates="student_profile")
     institution = relationship("Institution")
     department = relationship("Department")
-    skills = relationship(
+    student_skills = relationship(
         "StudentSkill",
         primaryjoin="StudentProfile.id == foreign(StudentSkill.student_id)",
         back_populates="student",

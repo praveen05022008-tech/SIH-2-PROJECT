@@ -20,10 +20,11 @@ import {
   CheckCircle2,
   ShieldCheck,
   TrendingUp,
-  AlertCircle
+  AlertCircle,
+  X
 } from 'lucide-react';
 
-export function Sidebar() {
+export function Sidebar({ isOpen = false, onClose }) {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [showIssueModal, setShowIssueModal] = useState(false);
@@ -99,13 +100,26 @@ export function Sidebar() {
 
   return (
     <>
-      <aside className="sidebar">
-        <div className="sidebar-brand">
-          <img src="/logo.svg" alt="AIC Logo" width="32" height="32" />
-          <div>
-            <div className="sidebar-brand-title">AIC PORTAL</div>
-            <div className="sidebar-brand-subtitle">Collaboration Portal</div>
+      {isOpen && <div className="sidebar-backdrop" onClick={onClose} />}
+
+      <aside className={`sidebar ${isOpen ? 'sidebar-mobile-open' : ''}`}>
+        <div className="sidebar-brand" style={{ justifyContent: 'space-between' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <img src="/logo.svg" alt="AIC Logo" width="32" height="32" />
+            <div>
+              <div className="sidebar-brand-title">AIC PORTAL</div>
+              <div className="sidebar-brand-subtitle">Collaboration Portal</div>
+            </div>
           </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="sidebar-close-btn"
+            title="Close navigation"
+            aria-label="Close sidebar"
+          >
+            <X size={20} />
+          </button>
         </div>
 
         <div style={{ padding: '12px 14px', borderBottom: '1px solid #2B3856', display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -133,6 +147,7 @@ export function Sidebar() {
               <NavLink
                 key={item.to}
                 to={item.to}
+                onClick={() => onClose && onClose()}
                 className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}
               >
                 <Icon size={16} />

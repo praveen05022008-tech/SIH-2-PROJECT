@@ -22,7 +22,7 @@ export function LandingPage() {
       <PublicHeader />
 
       {/* Hero Section */}
-      <section style={{ backgroundColor: '#1E2A44', color: '#FFFFFF', padding: '80px 20px', textAlign: 'center' }}>
+      <section style={{ backgroundColor: '#1E2A44', color: '#FFFFFF', padding: 'clamp(44px, 8vw, 80px) 16px', textAlign: 'center' }}>
         <div style={{ maxWidth: '900px', margin: '0 auto' }}>
           <span style={{
             backgroundColor: 'rgba(59, 91, 219, 0.2)',
@@ -38,11 +38,11 @@ export function LandingPage() {
             Centralized Enterprise Collaboration Platform
           </span>
 
-          <h1 style={{ fontSize: '38px', fontWeight: 700, marginTop: '20px', marginBottom: '16px', color: '#FFFFFF', lineHeight: '1.2' }}>
+          <h1 style={{ fontSize: 'clamp(24px, 5vw, 38px)', fontWeight: 700, marginTop: '20px', marginBottom: '16px', color: '#FFFFFF', lineHeight: '1.2' }}>
             Connect Skills. Discover Opportunities. Build Careers.
           </h1>
 
-          <p style={{ fontSize: '16px', color: '#CBD5E1', maxWidth: '750px', margin: '0 auto 32px', lineHeight: '1.6' }}>
+          <p style={{ fontSize: 'clamp(14px, 3.5vw, 16px)', color: '#CBD5E1', maxWidth: '750px', margin: '0 auto 32px', lineHeight: '1.6' }}>
             A centralized enterprise platform bridging the gap between academic education and industry requirements. Empowering Students, Academicians, Industries, and Institutions through deterministic skill mapping, internships, placements, and verified collaboration.
           </p>
 

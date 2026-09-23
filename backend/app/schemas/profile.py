@@ -15,6 +15,7 @@ class StudentProfileBase(BaseModel):
     graduation_year: Optional[int] = None
     career_interests: Optional[str] = None
     preferred_roles: Optional[str] = None
+    skills: Optional[str] = None
     preferred_locations: Optional[str] = None
     resume_url: Optional[str] = None
     profile_photo_url: Optional[str] = None

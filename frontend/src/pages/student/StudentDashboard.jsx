@@ -110,7 +110,7 @@ export function StudentDashboard() {
       </div>
 
       {/* Quick Action Hub */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '20px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 280px), 1fr))', gap: '16px' }}>
         <div className="card">
           <div className="card-header">
             <h3 className="card-title">Skill Assessment & Profiling</h3>
@@ -118,7 +118,7 @@ export function StudentDashboard() {
           <p className="text-muted" style={{ fontSize: '13px', marginBottom: '16px', lineHeight: '1.6' }}>
             Verify your competencies through timed domain tests to unlock validated proficiency badges and increase your candidate match score.
           </p>
-          <div style={{ display: 'flex', gap: '10px' }}>
+          <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
             <Link to="/student/assessments" className="btn btn-secondary btn-sm">
               Take Assessments <ArrowRight size={14} />
             </Link>
@@ -135,7 +135,7 @@ export function StudentDashboard() {
           <p className="text-muted" style={{ fontSize: '13px', marginBottom: '16px', lineHeight: '1.6' }}>
             Benchmark your current skills against industry career roles to discover missing competencies and receive tailored course recommendations.
           </p>
-          <div style={{ display: 'flex', gap: '10px' }}>
+          <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
             <Link to="/student/gap-analysis" className="btn btn-secondary btn-sm">
               Analyze Skill Gaps <Compass size={14} />
             </Link>

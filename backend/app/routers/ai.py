@@ -371,6 +371,7 @@ def extract_text_from_file(file_bytes: bytes, filename: str) -> str:
             raise HTTPException(status_code=400, detail=f"Failed to parse PDF file: {str(e)}")
     elif filename_lower.endswith(".docx"):
         try:
+            # pyrefly: ignore [missing-import]
             import docx
 
             doc = docx.Document(io.BytesIO(file_bytes))

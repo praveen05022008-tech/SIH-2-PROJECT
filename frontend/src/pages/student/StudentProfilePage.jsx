@@ -41,6 +41,7 @@ export function StudentProfilePage() {
     graduation_year: 2026,
     career_interests: '',
     preferred_roles: '',
+    skills: '',
     preferred_locations: '',
     resume_url: '',
   });
@@ -96,8 +97,6 @@ export function StudentProfilePage() {
   const [docFile, setDocFile] = useState(null);
   const [uploadingDoc, setUploadingDoc] = useState(false);
 
-  const toast = useToast();
-
   useEffect(() => {
     const tabFromUrl = searchParams.get('tab');
     if (tabFromUrl && tabFromUrl !== activeTab) {
@@ -129,6 +128,7 @@ export function StudentProfilePage() {
           graduation_year: profileData.graduation_year || 2026,
           career_interests: profileData.career_interests || '',
           preferred_roles: profileData.preferred_roles || '',
+          skills: profileData.skills || '',
           preferred_locations: profileData.preferred_locations || '',
           resume_url: profileData.resume_url || '',
         });
@@ -204,12 +204,15 @@ export function StudentProfilePage() {
       formData.append('file', resumeExtractFile);
       const res = await api.post('/ai/extract-resume-file', formData);
       setParsedData(res);
-      if (res.suggested_roles?.length > 0) {
-        setProfile((prev) => ({
-          ...prev,
-          preferred_roles: res.suggested_roles.join(', ')
-        }));
-      }
+      const extractedSkills = [
+        ...(res.technical_skills || []),
+        ...(res.soft_skills || [])
+      ];
+      setProfile((prev) => ({
+        ...prev,
+        preferred_roles: res.suggested_roles?.length > 0 ? res.suggested_roles.join(', ') : prev.preferred_roles,
+        skills: extractedSkills.length > 0 ? extractedSkills.join(', ') : prev.skills
+      }));
       toast.success('Skills and career roles extracted successfully from PDF via AI.');
     } catch (err) {
       toast.error('Failed to extract resume: ' + err.message);
@@ -360,7 +363,10 @@ export function StudentProfilePage() {
         marginBottom: '24px',
         borderBottom: '2px solid #E2E5EA',
         paddingBottom: '2px',
-        flexWrap: 'wrap'
+        overflowX: 'auto',
+        whiteSpace: 'nowrap',
+        WebkitOverflowScrolling: 'touch',
+        scrollbarWidth: 'none'
       }}>
         <button
           type="button"
@@ -561,6 +567,24 @@ export function StudentProfilePage() {
                 </div>
 
                 <div className="form-group">
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                    <label className="form-label" style={{ margin: 0 }}>Skills (Extracted & Technical)</label>
+                    {profile.skills && profile.skills.trim() && (
+                      <span className="badge badge-info" style={{ fontSize: '11px', padding: '2px 7px' }}>
+                        {profile.skills.split(',').filter((s) => s.trim()).length} Mapped
+                      </span>
+                    )}
+                  </div>
+                  <input
+                    type="text"
+                    className="form-control"
+                    placeholder="e.g. Python, React, FastAPI, SQL, Docker (auto-mapped from resume)"
+                    value={profile.skills}
+                    onChange={(e) => setProfile({ ...profile, skills: e.target.value })}
+                  />
+                </div>
+
+                <div className="form-group">
                   <label className="form-label">Preferred Work Locations</label>
                   <input
                     type="text"
@@ -571,6 +595,60 @@ export function StudentProfilePage() {
                   />
                 </div>
               </div>
+
+              {profile.skills && profile.skills.trim() && (
+                <div style={{ marginTop: '-4px', marginBottom: '16px' }}>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', alignItems: 'center' }}>
+                    <span style={{ fontSize: '12px', color: '#64748B', fontWeight: 600 }}>Mapped Skills:</span>
+                    {profile.skills
+                      .split(',')
+                      .map((s) => s.trim())
+                      .filter(Boolean)
+                      .map((skill, sIdx) => (
+                        <span
+                          key={sIdx}
+                          className="badge badge-neutral"
+                          style={{
+                            fontSize: '12px',
+                            padding: '3px 8px',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '5px',
+                            backgroundColor: '#EEF2FF',
+                            color: '#3730A3',
+                            border: '1px solid #C7D2FE',
+                          }}
+                        >
+                          {skill}
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const remaining = profile.skills
+                                .split(',')
+                                .map((x) => x.trim())
+                                .filter((x) => x && x.toLowerCase() !== skill.toLowerCase())
+                                .join(', ');
+                              setProfile({ ...profile, skills: remaining });
+                            }}
+                            style={{
+                              border: 'none',
+                              background: 'transparent',
+                              cursor: 'pointer',
+                              padding: 0,
+                              lineHeight: 1,
+                              color: '#6366F1',
+                              fontWeight: 'bold',
+                              fontSize: '13px',
+                            }}
+                            title={`Remove ${skill}`}
+                          >
+                            &times;
+                          </button>
+                        </span>
+                      ))}
+                  </div>
+                </div>
+              )}
 
               <button type="submit" className="btn btn-primary" disabled={savingProfile}>
                 {savingProfile ? 'Saving...' : 'Save Profile Changes'}
@@ -975,6 +1053,27 @@ export function StudentProfilePage() {
                     <strong>Profile Summary:</strong> {parsedData.experience_summary}
                   </div>
                 )}
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    const extractedSkills = [
+                      ...(parsedData.technical_skills || []),
+                      ...(parsedData.soft_skills || [])
+                    ];
+                    setProfile((prev) => ({
+                      ...prev,
+                      preferred_roles: parsedData.suggested_roles?.length > 0 ? parsedData.suggested_roles.join(', ') : prev.preferred_roles,
+                      skills: extractedSkills.length > 0 ? extractedSkills.join(', ') : prev.skills
+                    }));
+                    setShowAiResumeModal(false);
+                    toast.success('Skills and career roles mapped to profile!');
+                  }}
+                  className="btn btn-primary btn-sm"
+                  style={{ marginTop: '14px', width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', backgroundColor: '#3B5BDB' }}
+                >
+                  <Sparkles size={14} /> Apply & Map Extracted Skills to Profile
+                </button>
               </div>
             )}
           </div>
