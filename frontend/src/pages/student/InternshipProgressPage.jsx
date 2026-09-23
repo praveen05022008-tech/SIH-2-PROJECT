@@ -9,7 +9,7 @@ export function InternshipProgressPage() {
   const toast = useToast();
   const [internships, setInternships] = useState([]);
   const [loading, setLoading] = useState(true);
-  
+
   // Submit modal
   const [selectedTask, setSelectedTask] = useState(null);
   const [submissionUrl, setSubmissionUrl] = useState('');

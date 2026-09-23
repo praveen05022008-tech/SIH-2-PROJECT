@@ -122,8 +122,8 @@ export function StudentDashboard() {
             <Link to="/student/assessments" className="btn btn-secondary btn-sm">
               Take Assessments <ArrowRight size={14} />
             </Link>
-            <Link to="/student/skills" className="btn btn-outline btn-sm">
-              My Skill Profile
+            <Link to="/student/profile" className="btn btn-outline btn-sm">
+              My Profile & Portfolio
             </Link>
           </div>
         </div>

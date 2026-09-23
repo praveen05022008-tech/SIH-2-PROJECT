@@ -1,17 +1,22 @@
 from datetime import datetime
-from typing import Optional, List
+from typing import List, Optional
+
 from pydantic import BaseModel
+
 
 class OpportunitySkillBase(BaseModel):
     skill_id: int
     minimum_level: str = "intermediate"
     is_mandatory: bool = True
 
+
 class OpportunitySkillResponse(OpportunitySkillBase):
     id: int
     skill_name: Optional[str] = None
+
     class Config:
         from_attributes = True
+
 
 class OpportunityBase(BaseModel):
     title: str
@@ -29,8 +34,10 @@ class OpportunityBase(BaseModel):
     openings_count: Optional[int] = 1
     deadline: Optional[datetime] = None
 
+
 class OpportunityCreate(OpportunityBase):
     skills: List[OpportunitySkillBase] = []
+
 
 class OpportunityResponse(OpportunityBase):
     id: int
@@ -43,5 +50,6 @@ class OpportunityResponse(OpportunityBase):
     match_reasons: Optional[List[str]] = None
     missing_skills: Optional[List[str]] = None
     is_eligible: Optional[bool] = None
+
     class Config:
         from_attributes = True

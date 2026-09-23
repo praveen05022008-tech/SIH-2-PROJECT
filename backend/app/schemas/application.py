@@ -1,16 +1,20 @@
 from datetime import datetime
 from typing import Optional
-from pydantic import BaseModel
+
 from app.schemas.opportunity import OpportunityResponse
+from pydantic import BaseModel
+
 
 class ApplicationCreate(BaseModel):
     opportunity_id: int
     resume_url: Optional[str] = None
     cover_note: Optional[str] = None
 
+
 class ApplicationStatusUpdate(BaseModel):
     status: str  # applied, under_review, shortlisted, selected, rejected, in_progress, completed
     reviewer_notes: Optional[str] = None
+
 
 class ApplicantInfo(BaseModel):
     user_id: int
@@ -20,6 +24,7 @@ class ApplicantInfo(BaseModel):
     cgpa: Optional[float] = None
     institution_name: Optional[str] = None
     department_name: Optional[str] = None
+
 
 class ApplicationResponse(BaseModel):
     id: int
@@ -35,5 +40,6 @@ class ApplicationResponse(BaseModel):
     updated_at: datetime
     opportunity: Optional[OpportunityResponse] = None
     applicant: Optional[ApplicantInfo] = None
+
     class Config:
         from_attributes = True

@@ -8,9 +8,11 @@ import {
   CheckCircle,
   AlertCircle,
   Upload,
+  UploadCloud,
   Sparkles,
   Loader2,
   FileText,
+  FileCheck,
   User,
   FolderGit2,
   Award,
@@ -18,7 +20,8 @@ import {
   Trash2,
   ExternalLink,
   Code,
-  Globe
+  Globe,
+  X
 } from 'lucide-react';
 import { ENGINEERING_DEPARTMENTS } from '../../constants/departments';
 import { LoadingSpinner } from '../../components/common/LoadingSpinner';
@@ -59,11 +62,18 @@ export function StudentProfilePage() {
   const [resumeFile, setResumeFile] = useState(null);
   const [uploadingResume, setUploadingResume] = useState(false);
 
-  // AI Resume Parser
+  // AI Resume Skill Extractor State (Direct PDF Upload)
   const [showAiResumeModal, setShowAiResumeModal] = useState(false);
-  const [resumeTextInput, setResumeTextInput] = useState('');
+  const [resumeExtractFile, setResumeExtractFile] = useState(null);
   const [parsingResume, setParsingResume] = useState(false);
   const [parsedData, setParsedData] = useState(null);
+
+  // AI Resume Optimizer & Critique State (Direct PDF Upload)
+  const [showCritiqueModal, setShowCritiqueModal] = useState(false);
+  const [critiqueFile, setCritiqueFile] = useState(null);
+  const [critiqueTargetRole, setCritiqueTargetRole] = useState('');
+  const [critiquing, setCritiquing] = useState(false);
+  const [critiqueResult, setCritiqueResult] = useState(null);
 
   // Project modal
   const [showProjectModal, setShowProjectModal] = useState(false);
@@ -184,15 +194,15 @@ export function StudentProfilePage() {
 
   const handleExtractResumeSkills = async (e) => {
     e.preventDefault();
-    if (!resumeTextInput.trim()) {
-      toast.warning('Please paste resume text to extract skills.');
+    if (!resumeExtractFile) {
+      toast.warning('Please select or drop a Resume PDF file to extract skills.');
       return;
     }
     setParsingResume(true);
     try {
-      const res = await api.post('/ai/extract-resume', {
-        resume_text: resumeTextInput
-      });
+      const formData = new FormData();
+      formData.append('file', resumeExtractFile);
+      const res = await api.post('/ai/extract-resume-file', formData);
       setParsedData(res);
       if (res.suggested_roles?.length > 0) {
         setProfile((prev) => ({
@@ -200,7 +210,7 @@ export function StudentProfilePage() {
           preferred_roles: res.suggested_roles.join(', ')
         }));
       }
-      toast.success('Skills and career roles extracted successfully via Groq AI.');
+      toast.success('Skills and career roles extracted successfully from PDF via AI.');
     } catch (err) {
       toast.error('Failed to extract resume: ' + err.message);
     } finally {
@@ -208,7 +218,31 @@ export function StudentProfilePage() {
     }
   };
 
+  const handleCritiqueResume = async (e) => {
+    e.preventDefault();
+    if (!critiqueFile) {
+      toast.warning('Please select or drop a Resume PDF file for critique.');
+      return;
+    }
+    setCritiquing(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', critiqueFile);
+      if (critiqueTargetRole || profile.preferred_roles) {
+        formData.append('target_role', critiqueTargetRole || profile.preferred_roles || 'Software Engineer');
+      }
+      const data = await api.post('/ai/resume-critique-file', formData);
+      setCritiqueResult(data);
+      toast.success('AI Resume Critique generated successfully from PDF!');
+    } catch (err) {
+      toast.error('Failed to generate critique: ' + err.message);
+    } finally {
+      setCritiquing(false);
+    }
+  };
+
   const handleUpdateBio = async (e) => {
+
     e.preventDefault();
     setSavingBio(true);
     try {
@@ -577,10 +611,19 @@ export function StudentProfilePage() {
                 <Upload size={14} />
                 {uploadingResume ? 'Uploading to Cloudinary...' : 'Upload Resume'}
               </button>
+              <button
+                type="button"
+                onClick={() => setShowCritiqueModal(true)}
+                className="btn btn-primary btn-sm"
+                style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', backgroundColor: '#3B5BDB' }}
+              >
+                <Sparkles size={14} /> AI Resume Optimizer & Critique
+              </button>
             </form>
           </div>
         </div>
       )}
+
 
       {/* TAB 2: DIGITAL PORTFOLIO & PROJECTS */}
       {activeTab === 'portfolio' && (
@@ -794,68 +837,142 @@ export function StudentProfilePage() {
       {/* MODAL: AI Resume Skill Extractor */}
       {showAiResumeModal && (
         <div className="modal-overlay">
-          <div className="modal-content" style={{ maxWidth: '580px' }}>
+          <div className="modal-content" style={{ maxWidth: '580px', maxHeight: '90vh', overflowY: 'auto' }}>
             <div className="card-header">
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <Sparkles size={18} color="#3B5BDB" />
-                <h3 className="card-title">Groq AI Resume Skill Extractor</h3>
+                <div>
+                  <h3 className="card-title" style={{ margin: 0 }}>AI Resume Skill Extractor</h3>
+                  <span style={{ fontSize: '12px', color: '#64748B' }}>Upload your resume PDF to extract skills & roles via AI</span>
+                </div>
               </div>
               <button onClick={() => setShowAiResumeModal(false)} className="btn btn-outline btn-sm">Close</button>
             </div>
 
             <form onSubmit={handleExtractResumeSkills}>
               <div className="form-group">
-                <label className="form-label">Paste Resume Text / Summary</label>
-                <textarea
-                  className="form-control"
-                  rows={6}
-                  placeholder="Paste your resume content, summary, projects, and work experience here..."
-                  value={resumeTextInput}
-                  onChange={(e) => setResumeTextInput(e.target.value)}
-                  disabled={parsingResume}
-                  required
-                />
+                <label className="form-label" style={{ fontWeight: 600, color: '#1E293B', marginBottom: '8px' }}>
+                  Upload Resume File (PDF / DOCX) *
+                </label>
+                {!resumeExtractFile ? (
+                  <label
+                    style={{
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      border: '2px dashed #93C5FD',
+                      borderRadius: '8px',
+                      padding: '28px 16px',
+                      backgroundColor: '#F0F9FF',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s ease',
+                    }}
+                  >
+                    <UploadCloud size={40} color="#2563EB" style={{ marginBottom: '10px' }} />
+                    <span style={{ fontWeight: 600, color: '#1E40AF', fontSize: '14.5px' }}>Click or drag & drop Resume PDF here</span>
+                    <span style={{ fontSize: '12px', color: '#64748B', marginTop: '4px' }}>Supports .pdf, .docx, and .txt files (up to 15MB)</span>
+                    <input
+                      type="file"
+                      accept=".pdf,.docx,.txt,application/pdf"
+                      style={{ display: 'none' }}
+                      onChange={(e) => {
+                        if (e.target.files && e.target.files[0]) {
+                          setResumeExtractFile(e.target.files[0]);
+                        }
+                      }}
+                    />
+                  </label>
+                ) : (
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      padding: '14px 16px',
+                      backgroundColor: '#EFF6FF',
+                      border: '1px solid #BFDBFE',
+                      borderRadius: '8px',
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                      <div style={{ width: '42px', height: '42px', borderRadius: '8px', backgroundColor: '#DBEAFE', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <FileText size={22} color="#1D4ED8" />
+                      </div>
+                      <div>
+                        <div style={{ fontWeight: 600, fontSize: '14px', color: '#1E3A8A' }}>{resumeExtractFile.name}</div>
+                        <div style={{ fontSize: '12px', color: '#64748B', marginTop: '2px' }}>
+                          {(resumeExtractFile.size / 1024).toFixed(1)} KB • <span style={{ color: '#16A34A', fontWeight: 600 }}>Ready to extract</span>
+                        </div>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setResumeExtractFile(null)}
+                      style={{ border: 'none', background: 'transparent', color: '#DC2626', cursor: 'pointer', padding: '6px' }}
+                      title="Remove file"
+                    >
+                      <X size={18} />
+                    </button>
+                  </div>
+                )}
               </div>
 
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginBottom: '16px' }}>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '18px', marginBottom: '16px' }}>
                 <button type="button" onClick={() => setShowAiResumeModal(false)} className="btn btn-outline btn-sm" disabled={parsingResume}>Cancel</button>
                 <button
                   type="submit"
                   className="btn btn-primary btn-sm"
-                  disabled={parsingResume || !resumeTextInput.trim()}
+                  disabled={parsingResume || !resumeExtractFile}
                   style={{ display: 'flex', alignItems: 'center', gap: '6px', backgroundColor: '#3B5BDB' }}
                 >
                   {parsingResume ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />}
-                  {parsingResume ? 'Extracting with Groq...' : 'Extract Skills & Roles'}
+                  {parsingResume ? 'Extracting from PDF...' : 'Extract Skills & Roles'}
                 </button>
               </div>
             </form>
 
             {parsedData && (
-              <div style={{ backgroundColor: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '6px', padding: '14px', fontSize: '13px' }}>
-                <h4 style={{ fontSize: '14px', color: '#1E2A44', marginBottom: '8px' }}>AI Extracted Profile Insights:</h4>
-                
+              <div style={{ backgroundColor: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '6px', padding: '16px', fontSize: '13px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
+                  <h4 style={{ fontSize: '14px', color: '#1E2A44', margin: 0, fontWeight: 700 }}>AI Extracted Profile Insights:</h4>
+                  <span className="badge badge-success" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    <FileCheck size={12} /> Successfully Parsed
+                  </span>
+                </div>
+
                 {parsedData.technical_skills?.length > 0 && (
-                  <div style={{ marginBottom: '8px' }}>
-                    <strong>Technical Skills:</strong>{' '}
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '4px' }}>
+                  <div style={{ marginBottom: '12px' }}>
+                    <strong style={{ color: '#0F172A' }}>Technical Skills ({parsedData.technical_skills.length}):</strong>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '6px' }}>
                       {parsedData.technical_skills.map((s, idx) => (
-                        <span key={idx} className="badge badge-info">{s}</span>
+                        <span key={idx} className="badge badge-info" style={{ fontSize: '12px', padding: '4px 8px' }}>{s}</span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {parsedData.soft_skills?.length > 0 && (
+                  <div style={{ marginBottom: '12px' }}>
+                    <strong style={{ color: '#0F172A' }}>Soft Skills:</strong>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '6px' }}>
+                      {parsedData.soft_skills.map((s, idx) => (
+                        <span key={idx} className="badge badge-neutral" style={{ fontSize: '12px', padding: '4px 8px' }}>{s}</span>
                       ))}
                     </div>
                   </div>
                 )}
 
                 {parsedData.suggested_roles?.length > 0 && (
-                  <div style={{ marginBottom: '8px' }}>
-                    <strong>Suggested Career Roles:</strong>{' '}
-                    <span style={{ color: '#3B5BDB', fontWeight: 600 }}>{parsedData.suggested_roles.join(', ')}</span>
+                  <div style={{ marginBottom: '12px', padding: '10px 12px', backgroundColor: '#EFF6FF', borderRadius: '6px', border: '1px solid #DBEAFE' }}>
+                    <strong style={{ color: '#1E40AF' }}>Suggested Career Roles:</strong>
+                    <div style={{ color: '#1D4ED8', fontWeight: 600, marginTop: '2px' }}>{parsedData.suggested_roles.join(', ')}</div>
                   </div>
                 )}
 
                 {parsedData.experience_summary && (
-                  <div style={{ color: '#475569', fontSize: '12px', marginTop: '6px' }}>
-                    <em>{parsedData.experience_summary}</em>
+                  <div style={{ color: '#475569', fontSize: '12px', marginTop: '8px', lineHeight: 1.5, borderTop: '1px solid #E2E8F0', paddingTop: '8px' }}>
+                    <strong>Profile Summary:</strong> {parsedData.experience_summary}
                   </div>
                 )}
               </div>
@@ -965,6 +1082,192 @@ export function StudentProfilePage() {
                 <button type="submit" className="btn btn-primary btn-sm">Save Certification</button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: AI Resume Optimizer & Live Critique (Section 39 of Specification) */}
+      {showCritiqueModal && (
+        <div className="modal-overlay">
+          <div className="modal-content" style={{ maxWidth: '680px', maxHeight: '85vh', overflowY: 'auto' }}>
+            <div className="card-header">
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Sparkles size={20} color="#3B5BDB" />
+                <div>
+                  <h3 className="card-title" style={{ margin: 0 }}>AI Resume Optimizer & Critique</h3>
+                  <span style={{ fontSize: '12px', color: '#64748B' }}>Actionable improvements, metric quantification & verb optimization</span>
+                </div>
+              </div>
+              <button onClick={() => setShowCritiqueModal(false)} className="btn btn-outline btn-sm">Close</button>
+            </div>
+
+            <form onSubmit={handleCritiqueResume}>
+              <div className="form-group">
+                <label className="form-label">Target Industry Role</label>
+                <input
+                  type="text"
+                  className="form-control"
+                  placeholder="e.g. Full Stack Developer, Data Engineer, Cloud Intern"
+                  value={critiqueTargetRole}
+                  onChange={(e) => setCritiqueTargetRole(e.target.value)}
+                />
+              </div>
+
+              <div className="form-group">
+                <label className="form-label" style={{ fontWeight: 600, color: '#1E293B', marginBottom: '8px' }}>
+                  Select or Drop Resume File (PDF / DOCX) *
+                </label>
+                {!critiqueFile ? (
+                  <label
+                    style={{
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      border: '2px dashed #93C5FD',
+                      borderRadius: '8px',
+                      padding: '24px 16px',
+                      backgroundColor: '#F0F9FF',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s ease',
+                    }}
+                  >
+                    <UploadCloud size={36} color="#2563EB" style={{ marginBottom: '8px' }} />
+                    <span style={{ fontWeight: 600, color: '#1E40AF', fontSize: '14px' }}>Click or drag & drop Resume PDF here</span>
+                    <span style={{ fontSize: '12px', color: '#64748B', marginTop: '4px' }}>Supports .pdf, .docx, and .txt formats</span>
+                    <input
+                      type="file"
+                      accept=".pdf,.docx,.txt,application/pdf"
+                      style={{ display: 'none' }}
+                      onChange={(e) => {
+                        if (e.target.files && e.target.files[0]) {
+                          setCritiqueFile(e.target.files[0]);
+                        }
+                      }}
+                    />
+                  </label>
+                ) : (
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      padding: '12px 16px',
+                      backgroundColor: '#EFF6FF',
+                      border: '1px solid #BFDBFE',
+                      borderRadius: '8px',
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                      <div style={{ width: '38px', height: '38px', borderRadius: '6px', backgroundColor: '#DBEAFE', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <FileText size={20} color="#1D4ED8" />
+                      </div>
+                      <div>
+                        <div style={{ fontWeight: 600, fontSize: '13.5px', color: '#1E3A8A' }}>{critiqueFile.name}</div>
+                        <div style={{ fontSize: '12px', color: '#64748B' }}>{(critiqueFile.size / 1024).toFixed(1)} KB • <span style={{ color: '#16A34A', fontWeight: 600 }}>Ready</span></div>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setCritiqueFile(null)}
+                      style={{ border: 'none', background: 'transparent', color: '#DC2626', cursor: 'pointer', padding: '4px' }}
+                      title="Remove file"
+                    >
+                      <X size={18} />
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '16px', marginBottom: '16px' }}>
+                <button type="button" onClick={() => setShowCritiqueModal(false)} className="btn btn-outline btn-sm" disabled={critiquing}>Cancel</button>
+                <button
+                  type="submit"
+                  className="btn btn-primary btn-sm"
+                  disabled={critiquing || !critiqueFile}
+                  style={{ display: 'flex', alignItems: 'center', gap: '6px', backgroundColor: '#3B5BDB' }}
+                >
+                  {critiquing ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />}
+                  {critiquing ? 'Analyzing PDF with AI...' : 'Generate Resume Critique'}
+                </button>
+              </div>
+            </form>
+
+            {critiqueResult && (
+              <div style={{ borderTop: '1px solid #E2E8F0', paddingTop: '16px' }}>
+                {/* Score Banner */}
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  padding: '12px 16px',
+                  backgroundColor: '#F0F9FF',
+                  borderRadius: '6px',
+                  border: '1px solid #BAE6FD',
+                  marginBottom: '16px'
+                }}>
+                  <div>
+                    <span style={{ fontSize: '11px', textTransform: 'uppercase', fontWeight: 700, color: '#0369A1' }}>Resume Impact Score</span>
+                    <div style={{ fontSize: '13px', color: '#0C4A6E', marginTop: '2px' }}>{critiqueResult.summary_feedback}</div>
+                  </div>
+                  <div style={{ fontSize: '24px', fontWeight: 800, color: '#0284C7' }}>
+                    {critiqueResult.impact_score || 85}/100
+                  </div>
+                </div>
+
+                {/* Quantification Fixes */}
+                {critiqueResult.quantification_fixes?.length > 0 && (
+                  <div style={{ marginBottom: '16px' }}>
+                    <h4 style={{ fontSize: '13.5px', color: '#1E293B', marginBottom: '8px', fontWeight: 600 }}>
+                      ⚡ Recommended Bullet Point Quantifications:
+                    </h4>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                      {critiqueResult.quantification_fixes.map((q, idx) => (
+                        <div key={idx} style={{ backgroundColor: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '6px', padding: '10px', fontSize: '12.5px' }}>
+                          <div style={{ color: '#DC2626', textDecoration: 'line-through', marginBottom: '4px' }}>
+                            {q.original_phrase}
+                          </div>
+                          <div style={{ color: '#16A34A', fontWeight: 600, marginBottom: '2px' }}>
+                            ➜ {q.improved_phrase_suggestion}
+                          </div>
+                          <span style={{ fontSize: '11px', color: '#64748B' }}>Why: {q.reason}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Weak Verbs */}
+                {critiqueResult.weak_action_verbs_to_replace?.length > 0 && (
+                  <div style={{ marginBottom: '16px' }}>
+                    <h4 style={{ fontSize: '13.5px', color: '#1E293B', marginBottom: '8px', fontWeight: 600 }}>
+                      🔍 Action Verbs to Strengthen:
+                    </h4>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                      {critiqueResult.weak_action_verbs_to_replace.map((v, idx) => (
+                        <div key={idx} style={{ backgroundColor: '#FFFBEB', border: '1px solid #FDE68A', padding: '8px 10px', borderRadius: '4px', fontSize: '12px' }}>
+                          <span style={{ color: '#B45309', fontWeight: 600 }}>Replace '{v.weak_verb}'</span> ➜ <strong style={{ color: '#15803D' }}>{Array.isArray(v.recommended_action_verbs) ? v.recommended_action_verbs.join(', ') : v.recommended_action_verbs}</strong>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Target Keywords */}
+                {critiqueResult.tailored_role_keywords?.length > 0 && (
+                  <div>
+                    <h4 style={{ fontSize: '13px', color: '#1E293B', marginBottom: '6px', fontWeight: 600 }}>
+                      🎯 Role Keywords to Include:
+                    </h4>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                      {critiqueResult.tailored_role_keywords.map((kw, idx) => (
+                        <span key={idx} className="badge badge-info">{kw}</span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </div>
       )}

@@ -512,4 +512,3 @@ export function StudentAssessmentsPage() {
     </PortalLayout>
   );
 }
-

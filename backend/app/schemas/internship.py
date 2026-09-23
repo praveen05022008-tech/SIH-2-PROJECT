@@ -1,20 +1,25 @@
 from datetime import datetime
-from typing import Optional, List
+from typing import List, Optional
+
 from pydantic import BaseModel
+
 
 class TaskCreate(BaseModel):
     title: str
     description: Optional[str] = None
     due_date: Optional[datetime] = None
 
+
 class TaskSubmit(BaseModel):
     submission_url: str
     submission_notes: Optional[str] = None
+
 
 class TaskReview(BaseModel):
     grade: str
     feedback: Optional[str] = None
     status: str = "reviewed"
+
 
 class TaskResponse(BaseModel):
     id: int
@@ -28,14 +33,17 @@ class TaskResponse(BaseModel):
     grade: Optional[str] = None
     feedback: Optional[str] = None
     created_at: datetime
+
     class Config:
         from_attributes = True
+
 
 class MentorFeedbackCreate(BaseModel):
     feedback_text: str
     rating_technical: float = 4.0
     rating_soft_skills: float = 4.0
     rating_punctuality: float = 4.0
+
 
 class MentorFeedbackResponse(BaseModel):
     id: int
@@ -45,8 +53,10 @@ class MentorFeedbackResponse(BaseModel):
     rating_soft_skills: float
     rating_punctuality: float
     created_at: datetime
+
     class Config:
         from_attributes = True
+
 
 class InternshipResponse(BaseModel):
     id: int
@@ -66,5 +76,6 @@ class InternshipResponse(BaseModel):
     student_name: Optional[str] = None
     tasks: List[TaskResponse] = []
     feedbacks: List[MentorFeedbackResponse] = []
+
     class Config:
         from_attributes = True

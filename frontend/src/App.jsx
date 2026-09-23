@@ -11,8 +11,10 @@ import { RegisterPage } from './pages/public/RegisterPage';
 import { AboutPage } from './pages/public/AboutPage';
 import { FeaturesPage } from './pages/public/FeaturesPage';
 import { HowItWorksPage } from './pages/public/HowItWorksPage';
+import { PublicPortfolioPage } from './pages/public/PublicPortfolioPage';
 
 // Student Pages
+
 import { StudentDashboard } from './pages/student/StudentDashboard';
 import { StudentProfilePage } from './pages/student/StudentProfilePage';
 import { StudentAssessmentsPage } from './pages/student/StudentAssessmentsPage';
@@ -54,6 +56,7 @@ import { InstitutionCollaborationsPage } from './pages/institution/InstitutionCo
 // Admin Pages
 import { AdminDashboard } from './pages/admin/AdminDashboard';
 import { AdminApprovalsPage } from './pages/admin/AdminApprovalsPage';
+import { AdminIssuesPage } from './pages/admin/AdminIssuesPage';
 import { AdminSkillsPage } from './pages/admin/AdminSkillsPage';
 import { AdminAssessmentsPage } from './pages/admin/AdminAssessmentsPage';
 import { AdminAuditLogsPage } from './pages/admin/AdminAuditLogsPage';
@@ -73,13 +76,14 @@ export default function App() {
           <Route path="/how-it-works" element={<HowItWorksPage />} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
+          <Route path="/portfolio/:username" element={<PublicPortfolioPage />} />
 
           {/* Role 1: Student Routes */}
           <Route path="/student/dashboard" element={<StudentDashboard />} />
           <Route path="/student/profile" element={<StudentProfilePage />} />
           <Route path="/student/assessments" element={<StudentAssessmentsPage />} />
           <Route path="/student/assessment-results" element={<Navigate to="/student/assessments" replace />} />
-          <Route path="/student/skills" element={<StudentSkillsPage />} />
+          <Route path="/student/skills" element={<Navigate to="/student/profile" replace />} />
           <Route path="/student/gap-analysis" element={<SkillGapAnalysisPage />} />
           <Route path="/student/opportunities" element={<StudentOpportunitiesPage />} />
           <Route path="/student/applications" element={<StudentApplicationsPage />} />
@@ -118,6 +122,7 @@ export default function App() {
           {/* Role 5: Super Admin Routes */}
           <Route path="/admin/dashboard" element={<AdminDashboard />} />
           <Route path="/admin/approvals" element={<AdminApprovalsPage />} />
+          <Route path="/admin/issues" element={<AdminIssuesPage />} />
           <Route path="/admin/skills" element={<AdminSkillsPage />} />
           <Route path="/admin/assessments" element={<AdminAssessmentsPage />} />
           <Route path="/admin/opportunities" element={<MyOpportunitiesPage />} />
@@ -132,4 +137,3 @@ export default function App() {
     </ToastProvider>
   );
 }
-

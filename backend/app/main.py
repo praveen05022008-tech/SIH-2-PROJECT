@@ -1,23 +1,35 @@
 import os
-from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
-from fastapi.staticfiles import StaticFiles
+
 from app.config import settings
 from app.initial_setup import init_db
 
 # Routers
 from app.routers import (
-    auth, users, profiles, skills,
-    assessments, opportunities, applications,
-    internships, portfolios, collaborations,
-    learning, documents, analytics, admin,
-    ai
+    admin,
+    ai,
+    analytics,
+    applications,
+    assessments,
+    auth,
+    collaborations,
+    documents,
+    internships,
+    issues,
+    learning,
+    opportunities,
+    portfolios,
+    profiles,
+    skills,
+    users,
 )
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 
 app = FastAPI(
     title=settings.PROJECT_NAME,
     version="1.0.0",
-    description="Centralized Platform for Academia–Industry Collaboration for Skill Mapping, Internships and Placement"
+    description="Centralized Platform for Academia–Industry Collaboration for Skill Mapping, Internships and Placement",
 )
 
 # CORS setup
@@ -50,10 +62,13 @@ app.include_router(documents.router, prefix=v1)
 app.include_router(analytics.router, prefix=v1)
 app.include_router(admin.router, prefix=v1)
 app.include_router(ai.router, prefix=v1)
+app.include_router(issues.router, prefix=v1)
+
 
 @app.on_event("startup")
 def on_startup():
     init_db()
+
 
 @app.get("/healthz", tags=["System Health"])
 def health_check():
@@ -63,13 +78,14 @@ def health_check():
         "database": "TiDB Distributed SQL",
         "storage": "Cloudinary CDN",
         "ai_engine": "Groq Cloud API",
-        "version": "1.0.0"
+        "version": "1.0.0",
     }
+
 
 @app.get("/", tags=["Root"])
 def root():
     return {
         "message": "Academia–Industry Collaboration Portal API is running.",
         "docs": "/docs",
-        "api_v1": settings.API_V1_STR
+        "api_v1": settings.API_V1_STR,
     }

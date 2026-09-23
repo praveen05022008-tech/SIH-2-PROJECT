@@ -1,10 +1,12 @@
 from datetime import datetime
-from sqlalchemy import Column, Integer, String, Boolean, DateTime, Float, Text
+
 from app.database import Base
+from sqlalchemy import Boolean, Column, DateTime, Float, Integer, String, Text
+
 
 class LearningProgram(Base):
     __tablename__ = "learning_programs"
-    
+
     id = Column(Integer, primary_key=True, index=True)
     title = Column(String(255), nullable=False, index=True)
     provider_name = Column(String(255), nullable=False)

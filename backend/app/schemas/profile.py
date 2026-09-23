@@ -1,5 +1,7 @@
-from typing import Optional, List
+from typing import List, Optional
+
 from pydantic import BaseModel
+
 
 class StudentProfileBase(BaseModel):
     full_name: str
@@ -17,17 +19,22 @@ class StudentProfileBase(BaseModel):
     resume_url: Optional[str] = None
     profile_photo_url: Optional[str] = None
 
+
 class StudentProfileCreate(StudentProfileBase):
     pass
+
 
 class StudentProfileUpdate(StudentProfileBase):
     pass
 
+
 class StudentProfileResponse(StudentProfileBase):
     id: int
     user_id: int
+
     class Config:
         from_attributes = True
+
 
 class FacultyProfileBase(BaseModel):
     full_name: str
@@ -41,17 +48,22 @@ class FacultyProfileBase(BaseModel):
     research_areas: Optional[str] = None
     cv_url: Optional[str] = None
 
+
 class FacultyProfileCreate(FacultyProfileBase):
     pass
+
 
 class FacultyProfileUpdate(FacultyProfileBase):
     pass
 
+
 class FacultyProfileResponse(FacultyProfileBase):
     id: int
     user_id: int
+
     class Config:
         from_attributes = True
+
 
 class IndustryProfileBase(BaseModel):
     company_name: str
@@ -64,15 +76,19 @@ class IndustryProfileBase(BaseModel):
     contact_email: Optional[str] = None
     contact_phone: Optional[str] = None
 
+
 class IndustryProfileCreate(IndustryProfileBase):
     pass
 
+
 class IndustryProfileUpdate(IndustryProfileBase):
     pass
+
 
 class IndustryProfileResponse(IndustryProfileBase):
     id: int
     user_id: int
     verification_status: str
+
     class Config:
         from_attributes = True

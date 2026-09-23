@@ -4,7 +4,21 @@ import { PortalLayout } from '../../components/layout/PortalLayout';
 import { useToast } from '../../context/ToastContext';
 import { LoadingSpinner } from '../../components/common/LoadingSpinner';
 
-import { Compass, CheckCircle2, AlertCircle, BookOpen, ArrowRight, Sparkles, Loader2, Calendar, Target, ShieldCheck } from 'lucide-react';
+import {
+  Compass,
+  CheckCircle2,
+  AlertCircle,
+  AlertTriangle,
+  XCircle,
+  Clock,
+  BookOpen,
+  ArrowRight,
+  Sparkles,
+  Loader2,
+  Calendar,
+  Target,
+  ShieldCheck
+} from 'lucide-react';
 import { AICareerCounselor } from '../../components/AICareerCounselor';
 
 export function SkillGapAnalysisPage() {
@@ -151,7 +165,7 @@ export function SkillGapAnalysisPage() {
                     )}
                   </div>
                   <h4 style={{ fontSize: '14px', color: '#1E293B', marginBottom: '8px' }}>{week.focus_theme}</h4>
-                  
+
                   {week.action_items && (
                     <ul style={{ paddingLeft: '18px', fontSize: '12.5px', color: '#475569', marginBottom: '8px' }}>
                       {Array.isArray(week.action_items) ? week.action_items.map((act, aIdx) => (
@@ -268,6 +282,138 @@ export function SkillGapAnalysisPage() {
               )}
             </div>
           </div>
+
+          {/* Interactive Skill Graph / Competency Map (Section 35 & 36 of Specification) */}
+          <div className="card" style={{ marginBottom: '24px', backgroundColor: '#FFFFFF' }}>
+
+            <div className="card-header" style={{ borderBottom: '1px solid #E2E8F0', paddingBottom: '12px', marginBottom: '16px' }}>
+              <div>
+                <h3 className="card-title" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <Target size={18} color="#3B5BDB" /> Interactive Competency Graph: {analysis.career_role}
+                </h3>
+                <p className="text-muted" style={{ fontSize: '12px', margin: '4px 0 0' }}>
+                  Visualized hierarchical skill ontology mapping required competencies against your verified telemetry
+                </p>
+              </div>
+              <div style={{ display: 'flex', gap: '8px', fontSize: '11.5px' }}>
+                <span className="badge badge-success" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <CheckCircle2 size={11} /> Mastered ({analysis.matching_skills.length})
+                </span>
+                <span className="badge badge-warning" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <AlertTriangle size={11} /> Developing ({analysis.weak_skills.length})
+                </span>
+                <span className="badge badge-danger" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <XCircle size={11} /> Gap ({analysis.missing_skills.length})
+                </span>
+              </div>
+            </div>
+
+            {/* Visual Node Tree */}
+            <div style={{ backgroundColor: '#F8FAFC', borderRadius: '8px', padding: '20px', border: '1px solid #E2E8F0', overflowX: 'auto' }}>
+              {/* Root Node */}
+              <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '20px' }}>
+                <div style={{
+                  padding: '12px 24px',
+                  backgroundColor: '#1E2A44',
+                  color: '#FFFFFF',
+                  borderRadius: '24px',
+                  fontWeight: 700,
+                  fontSize: '14px',
+                  boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px'
+                }}>
+                  <Compass size={16} color="#60A5FA" /> {analysis.career_role} Benchmark
+                </div>
+              </div>
+
+              {/* Connecting Branch Line */}
+              <div style={{ width: '2px', height: '16px', backgroundColor: '#CBD5E1', margin: '0 auto 16px' }} />
+
+              {/* Competency Clusters */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '16px' }}>
+                {/* Domain 1: Mastered Skills */}
+                <div style={{ backgroundColor: '#FFFFFF', borderRadius: '6px', border: '1px solid #BBF7D0', padding: '14px' }}>
+                  <div style={{ fontWeight: 600, color: '#166534', fontSize: '13px', marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <CheckCircle2 size={15} color="#166534" /> Verified Competencies
+                  </div>
+                  {analysis.matching_skills.length === 0 ? (
+                    <div style={{ fontSize: '12px', color: '#94A3B8' }}>None verified yet</div>
+                  ) : (
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                      {analysis.matching_skills.map((s, idx) => (
+                        <div key={idx} style={{
+                          padding: '6px 10px',
+                          backgroundColor: '#DCFCE7',
+                          color: '#14532D',
+                          borderRadius: '16px',
+                          fontSize: '12px',
+                          fontWeight: 500,
+                          border: '1px solid #86EFAC'
+                        }}>
+                          {s.skill_name} • <span style={{ textTransform: 'capitalize', fontSize: '11px' }}>{s.current_level}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Domain 2: Developing Skills */}
+                <div style={{ backgroundColor: '#FFFFFF', borderRadius: '6px', border: '1px solid #FEF08A', padding: '14px' }}>
+                  <div style={{ fontWeight: 600, color: '#854D0E', fontSize: '13px', marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <AlertTriangle size={15} color="#854D0E" /> Developing / Proficiency Gaps
+                  </div>
+                  {analysis.weak_skills.length === 0 ? (
+                    <div style={{ fontSize: '12px', color: '#94A3B8' }}>No partial gaps detected</div>
+                  ) : (
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                      {analysis.weak_skills.map((s, idx) => (
+                        <div key={idx} style={{
+                          padding: '6px 10px',
+                          backgroundColor: '#FEF9C3',
+                          color: '#713F12',
+                          borderRadius: '16px',
+                          fontSize: '12px',
+                          fontWeight: 500,
+                          border: '1px solid #FDE047'
+                        }}>
+                          {s.skill_name} • <span style={{ fontSize: '11px' }}>{s.gap}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Domain 3: Missing Required Skills */}
+                <div style={{ backgroundColor: '#FFFFFF', borderRadius: '6px', border: '1px solid #FECACA', padding: '14px' }}>
+                  <div style={{ fontWeight: 600, color: '#991B1B', fontSize: '13px', marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <XCircle size={15} color="#991B1B" /> Critical Missing Gaps
+                  </div>
+                  {analysis.missing_skills.length === 0 ? (
+                    <div style={{ fontSize: '12px', color: '#94A3B8' }}>No missing skills!</div>
+                  ) : (
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                      {analysis.missing_skills.map((s, idx) => (
+                        <div key={idx} style={{
+                          padding: '6px 10px',
+                          backgroundColor: '#FEE2E2',
+                          color: '#7F1D1D',
+                          borderRadius: '16px',
+                          fontSize: '12px',
+                          fontWeight: 500,
+                          border: '1px solid #FCA5A5'
+                        }}>
+                          {s.skill_name} (Target: {s.required_level})
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+
 
           {/* Recommended Learning Programs */}
           <div className="card">

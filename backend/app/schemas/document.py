@@ -1,6 +1,8 @@
 from datetime import datetime
-from typing import Optional, List
+from typing import List, Optional
+
 from pydantic import BaseModel
+
 
 class DocumentResponse(BaseModel):
     id: int
@@ -14,13 +16,16 @@ class DocumentResponse(BaseModel):
     verification_status: Optional[str] = "pending"
     verification_remarks: Optional[str] = None
     owner_name: Optional[str] = None
+
     class Config:
         from_attributes = True
+
 
 class DocumentVerificationCreate(BaseModel):
     document_id: int
     verification_status: str  # verified, rejected
     remarks: Optional[str] = None
+
 
 class DocumentVerificationResponse(BaseModel):
     id: int
@@ -29,5 +34,6 @@ class DocumentVerificationResponse(BaseModel):
     verification_status: str
     remarks: Optional[str] = None
     verified_at: datetime
+
     class Config:
         from_attributes = True

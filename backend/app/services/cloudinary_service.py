@@ -1,6 +1,7 @@
-import os
 import logging
-from typing import Dict, Any, Optional
+import os
+from typing import Any, Dict, Optional
+
 import cloudinary
 import cloudinary.uploader
 from app.config import settings
@@ -13,17 +14,15 @@ if settings.CLOUDINARY_CLOUD_NAME and settings.CLOUDINARY_API_KEY and settings.C
         cloud_name=settings.CLOUDINARY_CLOUD_NAME,
         api_key=settings.CLOUDINARY_API_KEY,
         api_secret=settings.CLOUDINARY_API_SECRET,
-        secure=True
+        secure=True,
     )
     logger.info(f"Cloudinary initialized with cloud_name={settings.CLOUDINARY_CLOUD_NAME}")
 else:
     logger.warning("Cloudinary credentials missing or incomplete in settings.")
 
+
 def upload_file_to_cloudinary(
-    file_bytes_or_buffer,
-    folder: str = "aic_portal",
-    resource_type: str = "auto",
-    public_id: Optional[str] = None
+    file_bytes_or_buffer, folder: str = "aic_portal", resource_type: str = "auto", public_id: Optional[str] = None
 ) -> Dict[str, Any]:
     """
     Uploads a file (resume, image, certificate, deliverable) to Cloudinary.
@@ -35,11 +34,7 @@ def upload_file_to_cloudinary(
       - resource_type: image / raw / video / auto
     """
     try:
-        upload_params = {
-            "folder": folder,
-            "resource_type": resource_type,
-            "overwrite": True
-        }
+        upload_params = {"folder": folder, "resource_type": resource_type, "overwrite": True}
         if public_id:
             upload_params["public_id"] = public_id
 
@@ -50,7 +45,7 @@ def upload_file_to_cloudinary(
             "public_id": response.get("public_id"),
             "format": response.get("format"),
             "bytes": response.get("bytes"),
-            "resource_type": response.get("resource_type")
+            "resource_type": response.get("resource_type"),
         }
     except Exception as e:
         logger.error(f"Cloudinary upload failed: {str(e)}")
