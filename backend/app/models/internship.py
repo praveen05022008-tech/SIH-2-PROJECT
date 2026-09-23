@@ -1,11 +1,14 @@
 from datetime import datetime
-from sqlalchemy import Column, Integer, String, Float, DateTime, ForeignKey, Text
+
+from sqlalchemy import Column, DateTime, Float, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import relationship
+
 from app.database import Base
+
 
 class Internship(Base):
     __tablename__ = "internships"
-    
+
     id = Column(Integer, primary_key=True, index=True)
     application_id = Column(Integer, ForeignKey("applications.id"), unique=True, nullable=False)
     student_id = Column(Integer, ForeignKey("student_profiles.id"), nullable=False)
@@ -18,16 +21,17 @@ class Internship(Base):
     final_grade = Column(String(10), nullable=True)  # e.g. "A+", "A", "Pass"
     completion_certificate_url = Column(String(500), nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
-    
+
     application = relationship("Application", back_populates="internship")
     student = relationship("StudentProfile")
     industry = relationship("IndustryProfile")
     tasks = relationship("InternshipTask", back_populates="internship", cascade="all, delete-orphan")
     feedbacks = relationship("MentorFeedback", back_populates="internship", cascade="all, delete-orphan")
 
+
 class InternshipTask(Base):
     __tablename__ = "internship_tasks"
-    
+
     id = Column(Integer, primary_key=True, index=True)
     internship_id = Column(Integer, ForeignKey("internships.id"), nullable=False)
     title = Column(String(255), nullable=False)
@@ -39,12 +43,13 @@ class InternshipTask(Base):
     grade = Column(String(20), nullable=True)
     feedback = Column(Text, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
-    
+
     internship = relationship("Internship", back_populates="tasks")
+
 
 class MentorFeedback(Base):
     __tablename__ = "mentor_feedback"
-    
+
     id = Column(Integer, primary_key=True, index=True)
     internship_id = Column(Integer, ForeignKey("internships.id"), nullable=False)
     mentor_id = Column(Integer, ForeignKey("users.id"), nullable=True)
@@ -53,6 +58,6 @@ class MentorFeedback(Base):
     rating_soft_skills = Column(Float, default=4.0)
     rating_punctuality = Column(Float, default=4.0)
     created_at = Column(DateTime, default=datetime.utcnow)
-    
+
     internship = relationship("Internship", back_populates="feedbacks")
     mentor = relationship("User")

@@ -3,7 +3,16 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { api } from '../../services/api';
 import { PortalLayout } from '../../components/layout/PortalLayout';
-import { GraduationCap, Users, Briefcase, FileCheck, Building2, ShieldCheck, ArrowRight } from 'lucide-react';
+import {
+  GraduationCap,
+  Users,
+  Briefcase,
+  FileCheck,
+  Building2,
+  ShieldCheck,
+  ArrowRight,
+  UploadCloud,
+} from 'lucide-react';
 import { LoadingSpinner } from '../../components/common/LoadingSpinner';
 
 export function InstitutionDashboard() {
@@ -119,11 +128,14 @@ export function InstitutionDashboard() {
             <h3 className="card-title">Governance Quick Actions</h3>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-            <Link to="/institution/document-verification" className="btn btn-primary btn-sm" style={{ justifyContent: 'flex-start' }}>
+            <Link to="/institution/students" className="btn btn-primary btn-sm" style={{ justifyContent: 'flex-start', backgroundColor: '#3B5BDB' }}>
+              <UploadCloud size={14} /> Bulk Onboard Students & Faculty (CSV)
+            </Link>
+            <Link to="/institution/document-verification" className="btn btn-outline btn-sm" style={{ justifyContent: 'flex-start' }}>
               <ShieldCheck size={14} /> Document Verification Desk
             </Link>
             <Link to="/institution/students" className="btn btn-outline btn-sm" style={{ justifyContent: 'flex-start' }}>
-              <GraduationCap size={14} /> View Student Roster
+              <GraduationCap size={14} /> View Student & Faculty Rosters
             </Link>
             <Link to="/institution/placements" className="btn btn-outline btn-sm" style={{ justifyContent: 'flex-start' }}>
               <Briefcase size={14} /> Placement & Internship Tracker

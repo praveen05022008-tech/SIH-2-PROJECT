@@ -1,6 +1,8 @@
 from datetime import datetime
-from typing import Optional, List, Dict, Any
+from typing import Any, Dict, List, Optional
+
 from pydantic import BaseModel
+
 
 class AssessmentQuestionBase(BaseModel):
     question_text: str
@@ -10,14 +12,18 @@ class AssessmentQuestionBase(BaseModel):
     difficulty: str = "medium"
     explanation: Optional[str] = None
 
+
 class AssessmentQuestionCreate(AssessmentQuestionBase):
     correct_answer: str
+
 
 class AssessmentQuestionResponse(AssessmentQuestionBase):
     id: int
     assessment_id: int
+
     class Config:
         from_attributes = True
+
 
 class AssessmentBase(BaseModel):
     title: str
@@ -28,20 +34,25 @@ class AssessmentBase(BaseModel):
     passing_marks: float = 50.0
     total_marks: float = 100.0
 
+
 class AssessmentCreate(AssessmentBase):
     is_published: bool = True
+
 
 class AssessmentResponse(AssessmentBase):
     id: int
     is_published: bool
     created_at: datetime
     questions: List[AssessmentQuestionResponse] = []
+
     class Config:
         from_attributes = True
+
 
 class AssessmentSubmitRequest(BaseModel):
     # Mapping of question_id -> student's selected answer string
     answers: Dict[int, str]
+
 
 class AssessmentResultResponse(BaseModel):
     id: int
@@ -53,5 +64,6 @@ class AssessmentResultResponse(BaseModel):
     detailed_answers: Optional[Dict[str, Any]] = None
     completed_at: datetime
     assessment_title: Optional[str] = None
+
     class Config:
         from_attributes = True

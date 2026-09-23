@@ -7,17 +7,18 @@ import sys
 # Ensure backend root is in sys.path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from app.database import Base, engine, SessionLocal
+from app.core.security import hash_password
+from app.database import Base, SessionLocal, engine
 import app.models  # Register all models with Base metadata
 from app.models.user import Role, User, Institution, Department
 from app.models.profile import StudentProfile, FacultyProfile, IndustryProfile
 from app.models.skill import SkillCategory, Skill, StudentSkill, CareerRole, CareerRoleSkill
-from app.core.security import hash_password
+
 
 def init_db():
     print("Creating all database tables (28 relational tables)...")
     Base.metadata.create_all(bind=engine)
-    
+
     db = SessionLocal()
     try:
         # 1. Populate the 5 system roles
@@ -26,9 +27,9 @@ def init_db():
             {"name": "faculty", "description": "Academician / Faculty stakeholder - FDPs, research, consultancy"},
             {"name": "industry", "description": "Industry stakeholder - post opportunities, evaluate, recruit"},
             {"name": "institution", "description": "Institution stakeholder - monitor, verify, govern"},
-            {"name": "admin", "description": "Super Administrator - platform governance and approvals"}
+            {"name": "admin", "description": "Super Administrator - platform governance and approvals"},
         ]
-        
+
         for r_info in system_roles:
             role = db.query(Role).filter(Role.name == r_info["name"]).first()
             if not role:
@@ -127,7 +128,7 @@ def init_db():
             db.flush()
             print(f" [+] Initialized {len(career_roles)} standard career tracks")
 
-        # 5. Bootstrap Initial Super Admin
+        # 5. Bootstrap Initial Super Admin account if not present
         admin_email = "admin@aicportal.in"
         admin_user = db.query(User).filter(User.email == admin_email).first()
         if not admin_user:
@@ -137,7 +138,7 @@ def init_db():
                 hashed_password=hash_password("AdminPassword@2026"),
                 role="admin",
                 is_approved=True,
-                is_active=True
+                is_active=True,
             )
             db.add(admin_user)
             print(f" [+] Initialized Super Admin account ({admin_email})")
@@ -147,7 +148,7 @@ def init_db():
             {
                 "email": "student@aicportal.in",
                 "username": "student_demo",
-                "password": "StudentPassword@2026",
+                "password": "DemoPassword@2026",
                 "role": "student",
                 "full_name": "Aarav Sharma",
                 "profile_type": "student"
@@ -155,7 +156,7 @@ def init_db():
             {
                 "email": "faculty@aicportal.in",
                 "username": "faculty_demo",
-                "password": "FacultyPassword@2026",
+                "password": "DemoPassword@2026",
                 "role": "faculty",
                 "full_name": "Dr. Priya Iyer",
                 "profile_type": "faculty"
@@ -163,7 +164,7 @@ def init_db():
             {
                 "email": "industry@aicportal.in",
                 "username": "industry_demo",
-                "password": "IndustryPassword@2026",
+                "password": "DemoPassword@2026",
                 "role": "industry",
                 "company_name": "Nexus Dynamics Corp",
                 "sector": "Information Technology",
@@ -172,7 +173,7 @@ def init_db():
             {
                 "email": "institution@aicportal.in",
                 "username": "institution_demo",
-                "password": "InstPassword@2026",
+                "password": "DemoPassword@2026",
                 "role": "institution",
                 "profile_type": "institution"
             }
@@ -250,6 +251,6 @@ def init_db():
     finally:
         db.close()
 
+
 if __name__ == "__main__":
     init_db()
-

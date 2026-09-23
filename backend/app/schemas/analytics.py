@@ -1,5 +1,7 @@
-from typing import List, Dict, Any, Optional
+from typing import Any, Dict, List, Optional
+
 from pydantic import BaseModel
+
 
 class AdminAnalyticsResponse(BaseModel):
     total_students: int
@@ -13,6 +15,7 @@ class AdminAnalyticsResponse(BaseModel):
     selected_candidates: int
     recent_activity: List[Dict[str, Any]] = []
 
+
 class InstitutionAnalyticsResponse(BaseModel):
     institution_name: str
     total_students: int
@@ -24,6 +27,7 @@ class InstitutionAnalyticsResponse(BaseModel):
     department_breakdown: List[Dict[str, Any]] = []
     top_skills: List[Dict[str, Any]] = []
 
+
 class IndustryAnalyticsResponse(BaseModel):
     company_name: str
     active_opportunities: int
@@ -32,6 +36,7 @@ class IndustryAnalyticsResponse(BaseModel):
     selected_candidates: int
     active_interns: int
     opportunities_breakdown: List[Dict[str, Any]] = []
+
 
 class StudentAnalyticsResponse(BaseModel):
     assessed_skills_count: int

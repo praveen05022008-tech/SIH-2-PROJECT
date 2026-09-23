@@ -1,16 +1,17 @@
 from app.database import Base
-from app.models.user import Role, Institution, Department, User
-from app.models.profile import StudentProfile, FacultyProfile, IndustryProfile
-from app.models.skill import SkillCategory, Skill, StudentSkill, CareerRole, CareerRoleSkill
 from app.models.assessment import Assessment, AssessmentQuestion, AssessmentResult
-from app.models.opportunity import Opportunity, OpportunitySkill, Application
-from app.models.internship import Internship, InternshipTask, MentorFeedback
-from app.models.portfolio import Portfolio, Project, Certification
-from app.models.collaboration import Collaboration
-from app.models.learning import LearningProgram
-from app.models.document import Document, DocumentVerification
-from app.models.notification import Notification
 from app.models.audit import AuditLog
+from app.models.collaboration import Collaboration
+from app.models.document import Document, DocumentVerification
+from app.models.internship import Internship, InternshipTask, MentorFeedback
+from app.models.issue import IssueReport
+from app.models.learning import LearningProgram
+from app.models.notification import Notification
+from app.models.opportunity import Application, Opportunity, OpportunitySkill
+from app.models.portfolio import Certification, Portfolio, Project
+from app.models.profile import FacultyProfile, IndustryProfile, StudentProfile
+from app.models.skill import CareerRole, CareerRoleSkill, Skill, SkillCategory, StudentSkill
+from app.models.user import Department, Institution, Role, User
 
 __all__ = [
     "Base",
@@ -43,5 +44,6 @@ __all__ = [
     "Document",
     "DocumentVerification",
     "Notification",
-    "AuditLog"
+    "AuditLog",
+    "IssueReport",
 ]

@@ -1,20 +1,24 @@
-import os
 import json
 import logging
-from typing import Dict, Any, List, Optional
+import urllib.error
+import urllib.request
+from typing import Any, Dict, List, Optional
+
 from app.config import settings
 
 logger = logging.getLogger(__name__)
 
-MODELS_PRIORITY = [
-    settings.GROQ_MODEL,
+GROQ_MODELS_PRIORITY = [
+    getattr(settings, "GROQ_MODEL", "llama3-70b-8192"),
     "llama3-70b-8192",
     "mixtral-8x7b-32768",
     "openai/gpt-oss-120b",
     "qwen/qwen3.8-27b",
+    "groq/compound-mini",
 ]
 
-def get_groq_client():
+
+def _get_groq_client():
     api_key = settings.GROQ_API_KEY
     if not api_key:
         return None
@@ -25,30 +29,122 @@ def get_groq_client():
         logger.warning(f"Unable to initialize Groq client: {e}")
         return None
 
-def _call_groq(messages: List[Dict[str, str]], json_mode: bool = False, temperature: float = 0.2) -> Optional[str]:
-    client = get_groq_client()
+
+def _clean_and_parse_json(raw: Optional[str], fallback_default: Any = None) -> Any:
+    if not raw or not raw.strip():
+        return fallback_default or {}
+    cleaned = raw.strip()
+    if cleaned.startswith("```"):
+        lines = cleaned.split("\n")
+        if lines[0].startswith("```"):
+            lines = lines[1:]
+        if lines and lines[-1].strip().startswith("```"):
+            lines = lines[:-1]
+        cleaned = "\n".join(lines).strip()
+
+    try:
+        return json.loads(cleaned)
+    except Exception:
+        start = cleaned.find("{")
+        end = cleaned.rfind("}")
+        if start != -1 and end != -1 and end > start:
+            try:
+                return json.loads(cleaned[start : end + 1])
+            except Exception:
+                pass
+        return fallback_default or {"raw_response": raw}
+
+
+def _call_ollama(messages: List[Dict[str, str]], json_mode: bool = False, temperature: float = 0.2) -> str:
+    """
+    Directly invokes local Ollama server (e.g. qwen2.5:7b) via HTTP API.
+    """
+    base_url = getattr(settings, "OLLAMA_BASE_URL", "http://localhost:11434")
+    url = f"{base_url.rstrip('/')}/api/chat"
+    payload: Dict[str, Any] = {
+        "model": getattr(settings, "OLLAMA_MODEL", "qwen2.5:7b"),
+        "messages": messages,
+        "stream": False,
+        "options": {
+            "temperature": temperature,
+        },
+    }
+    if json_mode:
+        payload["format"] = "json"
+
+    data = json.dumps(payload).encode("utf-8")
+    req = urllib.request.Request(
+        url,
+        data=data,
+        headers={"Content-Type": "application/json"},
+    )
+
+    with urllib.request.urlopen(req, timeout=20) as resp:
+        res = json.loads(resp.read().decode("utf-8"))
+        msg = res.get("message", {}).get("content", "")
+        return msg
+
+
+def _call_groq(messages: List[Dict[str, str]], json_mode: bool = False, temperature: float = 0.2) -> str:
+    """
+    Invokes Groq Cloud API with model fallbacks.
+    """
+    client = _get_groq_client()
     if not client:
-        return None
-    
+        raise ValueError("GROQ_API_KEY is not configured or Groq client is unavailable.")
     last_error = None
-    for model in MODELS_PRIORITY:
+
+    for model in GROQ_MODELS_PRIORITY:
         try:
-            kwargs = {
+            kwargs: Dict[str, Any] = {
                 "messages": messages,
                 "model": model,
                 "temperature": temperature,
             }
             if json_mode:
                 kwargs["response_format"] = {"type": "json_object"}
-                
+
             response = client.chat.completions.create(**kwargs)
             return response.choices[0].message.content
         except Exception as e:
             last_error = e
             logger.warning(f"Groq inference failed on model '{model}': {str(e)}. Trying next fallback...")
             continue
-            
-    logger.warning(f"All Groq inference attempts failed: {last_error}")
+
+    raise RuntimeError(f"All Groq models failed: {str(last_error)}")
+
+
+def _call_ai(messages: List[Dict[str, str]], json_mode: bool = False, temperature: float = 0.2) -> Optional[str]:
+    """
+    Multi-tier AI router:
+    1. Primary: Local Ollama (e.g. qwen2.5:7b)
+    2. Secondary: Groq Cloud API
+    Returns None if both fail so deterministic fallbacks can gracefully handle requests.
+    """
+    ai_provider = getattr(settings, "AI_PROVIDER", "groq").lower()
+    ollama_url = getattr(settings, "OLLAMA_BASE_URL", None)
+
+    if ai_provider == "ollama" or bool(ollama_url):
+        try:
+            res = _call_ollama(messages, json_mode=json_mode, temperature=temperature)
+            if res and res.strip():
+                logger.info(f"[AI_SERVICE: OLLAMA] Inferred response using {getattr(settings, 'OLLAMA_MODEL', 'local')}")
+                return res
+        except Exception as e:
+            logger.warning(
+                f"[AI_SERVICE: OLLAMA_FAIL] Ollama inference failed on '{getattr(settings, 'OLLAMA_MODEL', 'local')}': {e}. Falling back to Groq Cloud..."
+            )
+
+    # Fallback to Groq
+    if settings.GROQ_API_KEY:
+        try:
+            res = _call_groq(messages, json_mode=json_mode, temperature=temperature)
+            if res and res.strip():
+                logger.info(f"[AI_SERVICE: GROQ] Inferred response using Groq {settings.GROQ_MODEL}")
+                return res
+        except Exception as e:
+            logger.warning(f"[AI_SERVICE: GROQ_FAIL] Groq Cloud API failed: {e}")
+
     return None
 
 
@@ -60,7 +156,7 @@ def _fallback_skill_gap_roadmap(
 ) -> Dict[str, Any]:
     known_skills = [s.get("name", str(s)) for s in current_skills if isinstance(s, dict)]
     role_lower = target_role.lower()
-    
+
     recommended_skills = ["System Architecture", "Git & CI/CD", "Production Observability"]
     if "data" in role_lower or "ai" in role_lower or "machine" in role_lower:
         recommended_skills = ["PyTorch", "Model Evaluation & Tuning", "MLOps Pipelines", "Data Validation"]
@@ -72,7 +168,7 @@ def _fallback_skill_gap_roadmap(
         recommended_skills = ["FastAPI / Distributed Microservices", "Relational & NoSQL Databases", "Redis Caching", "Security & JWT"]
 
     score = min(85, max(45, len(known_skills) * 15 + 35))
-    
+
     return {
         "summary": f"Skill alignment analysis for {student_name or 'Candidate'} targeting the '{target_role}' role indicates strong fundamental readiness ({score}%). Focus on production tooling and architectural depth will close the remaining gaps.",
         "overall_readiness_score": score,
@@ -118,45 +214,6 @@ def _fallback_skill_gap_roadmap(
         ],
         "industry_advice": f"Industries hiring for {target_role} value hands-on system building and problem solving. Demonstrating real projects with measurable outcomes is the most impactful differentiator."
     }
-
-
-def analyze_skill_gap_and_generate_roadmap(
-    student_name: str,
-    target_role: str,
-    current_skills: List[Dict[str, Any]],
-    interests: Optional[str] = None
-) -> Dict[str, Any]:
-    system_prompt = (
-        "You are an expert Chief Technology Talent Advisor and Academic-Industry Skills Strategist. "
-        "Analyze the student's verified skills against the target industry role. "
-        "Output ONLY valid JSON with keys: "
-        "'summary', 'overall_readiness_score' (number 0-100), 'strengths' (array of strings), "
-        "'critical_gaps' (array of objects with 'skill', 'current_level', 'target_level', 'importance'), "
-        "'four_week_roadmap' (array of 4 objects with 'week', 'focus_theme', 'action_items', 'recommended_projects', 'estimated_hours'), "
-        "'industry_advice' (string)."
-    )
-    
-    user_prompt = f"""
-    Candidate: {student_name}
-    Target Career Role: {target_role}
-    Current Skills: {json.dumps(current_skills, indent=2)}
-    Career Interests / Context: {interests or 'Standard industry track'}
-    
-    Provide an in-depth, actionable gap analysis and personalized roadmap.
-    """
-    
-    raw = _call_groq([
-        {"role": "system", "content": system_prompt},
-        {"role": "user", "content": user_prompt}
-    ], json_mode=True, temperature=0.3)
-    
-    if raw:
-        try:
-            return json.loads(raw)
-        except Exception:
-            pass
-            
-    return _fallback_skill_gap_roadmap(student_name, target_role, current_skills, interests)
 
 
 def _fallback_assessment_quiz(skill_name: str, difficulty: str = "intermediate", num_questions: int = 5) -> Dict[str, Any]:
@@ -232,9 +289,9 @@ def _fallback_assessment_quiz(skill_name: str, difficulty: str = "intermediate",
             "explanation": "Production reliability is measured by availability SLOs, error budgets, and latency percentiles."
         }
     ]
-    
+
     selected_qs = default_qs[:min(num_questions, len(default_qs))]
-    
+
     return {
         "title": f"{skill_name} Industry Competency Assessment",
         "skill": skill_name,
@@ -244,11 +301,44 @@ def _fallback_assessment_quiz(skill_name: str, difficulty: str = "intermediate",
     }
 
 
+def analyze_skill_gap_and_generate_roadmap(
+    student_name: str, target_role: str, current_skills: List[Dict[str, Any]], interests: Optional[str] = None
+) -> Dict[str, Any]:
+    system_prompt = (
+        "You are an expert Chief Technology Talent Advisor and Academic-Industry Skills Strategist. "
+        "Analyze the student's verified skills against the target industry role. "
+        "Output ONLY valid JSON with keys: "
+        "'summary', 'overall_readiness_score' (number 0-100), 'strengths' (array of strings), "
+        "'critical_gaps' (array of objects with 'skill', 'current_level', 'target_level', 'importance'), "
+        "'four_week_roadmap' (array of 4 objects with 'week', 'focus_theme', 'action_items', 'recommended_projects', 'estimated_hours'), "
+        "'industry_advice' (string)."
+    )
+
+    user_prompt = f"""
+    Candidate: {student_name}
+    Target Career Role: {target_role}
+    Current Skills: {json.dumps(current_skills, indent=2)}
+    Career Interests / Context: {interests or 'Standard industry track'}
+
+    Provide an in-depth, actionable gap analysis and personalized roadmap.
+    """
+
+    raw = _call_ai(
+        [{"role": "system", "content": system_prompt}, {"role": "user", "content": user_prompt}],
+        json_mode=True,
+        temperature=0.3,
+    )
+
+    if raw:
+        parsed = _clean_and_parse_json(raw, fallback_default=None)
+        if isinstance(parsed, dict) and parsed.get("four_week_roadmap") and len(parsed.get("four_week_roadmap", [])) > 0:
+            return parsed
+
+    return _fallback_skill_gap_roadmap(student_name, target_role, current_skills, interests)
+
+
 def generate_assessment_quiz(
-    skill_name: str,
-    difficulty: str = "intermediate",
-    num_questions: int = 5,
-    subtopics: Optional[str] = None
+    skill_name: str, difficulty: str = "intermediate", num_questions: int = 5, subtopics: Optional[str] = None
 ) -> Dict[str, Any]:
     system_prompt = (
         "You are an expert Technical Assessment Creator for top engineering and technology companies. "
@@ -260,7 +350,7 @@ def generate_assessment_quiz(
         '  "difficulty": "beginner|intermediate|advanced|expert",\n'
         '  "passing_percentage": 70,\n'
         '  "questions": [\n'
-        '    {\n'
+        "    {\n"
         '      "question_text": "Clear question scenario...",\n'
         '      "question_type": "mcq",\n'
         '      "options": ["Option A", "Option B", "Option C", "Option D"],\n'
@@ -268,35 +358,33 @@ def generate_assessment_quiz(
         '      "marks": 1,\n'
         '      "difficulty": "intermediate",\n'
         '      "explanation": "Why this answer is correct and others are wrong."\n'
-        '    }\n'
-        '  ]\n'
+        "    }\n"
+        "  ]\n"
         "}"
     )
-    
+
     user_prompt = f"""
     Generate {num_questions} practical {difficulty}-level MCQs for the skill: '{skill_name}'.
     Subtopics or focus areas: {subtopics or 'Core principles and real-world applied scenarios'}
     Ensure each question has 4 distinct options and one accurate correct_answer matching one of the options.
     """
-    
-    raw = _call_groq([
-        {"role": "system", "content": system_prompt},
-        {"role": "user", "content": user_prompt}
-    ], json_mode=True, temperature=0.2)
-    
+
+    raw = _call_ai(
+        [{"role": "system", "content": system_prompt}, {"role": "user", "content": user_prompt}],
+        json_mode=True,
+        temperature=0.2,
+    )
+
     if raw:
-        try:
-            return json.loads(raw)
-        except Exception:
-            pass
-            
+        parsed = _clean_and_parse_json(raw, fallback_default=None)
+        if isinstance(parsed, dict) and parsed.get("questions") and len(parsed.get("questions", [])) > 0:
+            return parsed
+
     return _fallback_assessment_quiz(skill_name, difficulty, num_questions)
 
 
 def career_counselor_chat(
-    user_message: str,
-    student_profile: Dict[str, Any],
-    chat_history: Optional[List[Dict[str, str]]] = None
+    user_message: str, student_profile: Dict[str, Any], chat_history: Optional[List[Dict[str, str]]] = None
 ) -> str:
     system_prompt = (
         f"You are the AI Career Counselor for the Academia-Industry Collaboration Portal. "
@@ -310,24 +398,24 @@ def career_counselor_chat(
         f"Give precise, encouraging, pragmatic, and industry-aligned advice on career paths, interview prep, "
         f"skill upgrades, and internship/job strategies. Keep responses structured and concise."
     )
-    
+
     messages = [{"role": "system", "content": system_prompt}]
     if chat_history:
         for msg in chat_history[-6:]:
             messages.append({"role": msg.get("role", "user"), "content": msg.get("content", "")})
-            
+
     messages.append({"role": "user", "content": user_message})
-    
-    raw = _call_groq(messages, json_mode=False, temperature=0.4)
+
+    raw = _call_ai(messages, json_mode=False, temperature=0.4)
     if raw and len(raw.strip()) > 10:
         return raw
-        
+
     # Intelligent fallback counselor response
     name = student_profile.get("full_name", "Student")
     dept = student_profile.get("department", "Engineering")
     skills = student_profile.get("skills", [])
     skills_text = ", ".join(skills) if skills else "your coursework fundamentals"
-    
+
     return (
         f"Hello {name}! Regarding your inquiry:\n\n"
         f"**Career Guidance for {dept}**\n\n"
@@ -347,24 +435,24 @@ def extract_skills_from_resume_text(resume_text: str) -> Dict[str, Any]:
         "Output ONLY valid JSON with keys: 'technical_skills' (array), 'soft_skills' (array), "
         "'suggested_roles' (array of strings), 'experience_summary' (string), 'portfolio_projects' (array of strings)."
     )
-    
-    raw = _call_groq([
-        {"role": "system", "content": system_prompt},
-        {"role": "user", "content": resume_text[:6000]}
-    ], json_mode=True, temperature=0.1)
-    
+
+    raw = _call_ai(
+        [{"role": "system", "content": system_prompt}, {"role": "user", "content": resume_text[:6000]}],
+        json_mode=True,
+        temperature=0.1,
+    )
+
     if raw:
-        try:
-            return json.loads(raw)
-        except Exception:
-            pass
-            
+        parsed = _clean_and_parse_json(raw, fallback_default=None)
+        if isinstance(parsed, dict) and parsed.get("technical_skills") and len(parsed.get("technical_skills", [])) > 0:
+            return parsed
+
     # Intelligent keyword extraction fallback
     common_tech = ["Python", "Java", "C++", "JavaScript", "TypeScript", "React", "Node.js", "SQL", "FastAPI", "Docker", "AWS", "Git", "Machine Learning", "HTML", "CSS"]
     extracted_tech = [t for t in common_tech if t.lower() in resume_text.lower()]
     if not extracted_tech:
         extracted_tech = ["Python", "SQL", "Git", "REST APIs"]
-        
+
     return {
         "technical_skills": extracted_tech,
         "soft_skills": ["Problem Solving", "Teamwork", "Agile Communication"],
@@ -374,45 +462,110 @@ def extract_skills_from_resume_text(resume_text: str) -> Dict[str, Any]:
     }
 
 
-def explain_candidate_match(
-    candidate_profile: Dict[str, Any],
-    opportunity_data: Dict[str, Any]
-) -> Dict[str, Any]:
+def explain_candidate_match(candidate_profile: Dict[str, Any], opportunity_data: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Generates an AI evaluation for recruiters explaining why this candidate is a good match and areas to test in interview.
+    """
     system_prompt = (
         "You are an AI Recruiting Assistant for hiring managers. "
         "Evaluate the candidate profile against the opportunity requirements. "
         "Output ONLY valid JSON with keys: 'match_verdict' (string), 'key_strengths' (array of strings), "
         "'potential_gaps' (array of strings), 'suggested_interview_questions' (array of 3 strings)."
     )
-    
+
     user_prompt = f"""
     Opportunity: {json.dumps(opportunity_data, indent=2)}
     Candidate: {json.dumps(candidate_profile, indent=2)}
     """
-    
-    raw = _call_groq([
-        {"role": "system", "content": system_prompt},
-        {"role": "user", "content": user_prompt}
-    ], json_mode=True, temperature=0.2)
-    
+
+    raw = _call_ai(
+        [{"role": "system", "content": system_prompt}, {"role": "user", "content": user_prompt}],
+        json_mode=True,
+        temperature=0.2,
+    )
+
     if raw:
-        try:
-            return json.loads(raw)
-        except Exception:
-            pass
-            
+        parsed = _clean_and_parse_json(raw, fallback_default=None)
+        if isinstance(parsed, dict) and parsed.get("match_verdict"):
+            return parsed
+
     c_name = candidate_profile.get("full_name", "Candidate")
     opp_title = opportunity_data.get("title", "the role")
     c_skills = [s.get("name", str(s)) for s in candidate_profile.get("skills", []) if isinstance(s, dict)]
-    
+
     return {
         "match_verdict": f"{c_name} demonstrates strong alignment with {opp_title} with proven foundational skills and relevant academic background.",
         "key_strengths": c_skills[:3] if c_skills else ["Academic Excellence", "Core Programming", "Demonstrated Learning Agility"],
         "potential_gaps": ["Production cloud operations experience", "Large-scale distributed systems tuning"],
         "suggested_interview_questions": [
-            f"How have you applied your key skills in academic or live projects?",
-            f"Describe how you troubleshoot unexpected runtime errors in a web service.",
-            f"What approach do you take to learn a new framework or technology under tight timelines?"
+            "How have you applied your key skills in academic or live projects?",
+            "Describe how you troubleshoot unexpected runtime errors in a web service.",
+            "What approach do you take to learn a new framework or technology under tight timelines?"
         ]
     }
 
+
+def critique_resume_with_groq(resume_text: str, target_role: Optional[str] = None) -> Dict[str, Any]:
+    """
+    AI Resume Assistant:
+    Identifies weak action verbs, missing metrics/quantified results, missing evidence,
+    and role-tailored bullet enhancements without fabricating experience.
+    """
+    system_prompt = (
+        "You are an expert AI Resume Coach and Technical Hiring Consultant. "
+        "Analyze the candidate's resume text against industry standards and their target role. "
+        "DO NOT fabricate experiences. Provide constructive, high-impact improvements. "
+        "Output ONLY valid JSON with keys: "
+        "'impact_score' (integer 0-100), "
+        "'summary_feedback' (string), "
+        "'strong_points' (array of strings), "
+        "'quantification_fixes' (array of objects with 'original_phrase', 'improved_phrase_suggestion', 'reason'), "
+        "'weak_action_verbs_to_replace' (array of objects with 'weak_verb', 'recommended_action_verbs', 'context'), "
+        "'missing_evidence_or_skills' (array of strings), "
+        "'tailored_role_keywords' (array of strings)."
+    )
+
+    user_prompt = f"""
+    Target Role: {target_role or 'General Software & Technical Internship'}
+    Resume Content:
+    {resume_text[:6000]}
+
+    Provide an actionable, structured critique to maximize industry shortlist probability.
+    """
+
+    raw = _call_ai(
+        [{"role": "system", "content": system_prompt}, {"role": "user", "content": user_prompt}],
+        json_mode=True,
+        temperature=0.2,
+    )
+
+    return _clean_and_parse_json(
+        raw,
+        fallback_default={
+            "impact_score": 82,
+            "summary_feedback": "Resume content processed with actionable optimization suggestions.",
+            "strong_points": [
+                "Solid foundational coursework and technical exposure",
+                "Clear academic timeline and project participation"
+            ],
+            "quantification_fixes": [
+                {
+                    "original_phrase": "Worked on web features",
+                    "improved_phrase_suggestion": "Architected and delivered 4 core API modules reducing latency by 25%",
+                    "reason": "Quantifying scope and performance provides tangible evidence of engineering competence."
+                }
+            ],
+            "weak_action_verbs_to_replace": [
+                {
+                    "weak_verb": "Helped with",
+                    "recommended_action_verbs": ["Implemented", "Coordinated", "Engineered"],
+                    "context": "Take active ownership verbs for project contributions"
+                }
+            ],
+            "missing_evidence_or_skills": [
+                "Unit and integration testing coverage metrics",
+                "CI/CD deployment pipeline experience"
+            ],
+            "tailored_role_keywords": ["REST API", "Database Optimization", "Docker", "Git Workflow", "Microservices"],
+        },
+    )

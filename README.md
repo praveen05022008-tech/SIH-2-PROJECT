@@ -101,8 +101,34 @@ GROQ_MODEL=llama3-70b-8192
 ---
 
 ## 5. Technology Stack
-- **Frontend**: React 18, Vite, React Router v6, Vanilla CSS / Modern Glassmorphic Design System, Lucide Icons.
-- **Backend**: FastAPI, SQLAlchemy 2.0, Pydantic v2, PyJWT, PyMySQL, Cryptography.
+- **Frontend**: React 19, Vite, React Router v7, Vanilla CSS / Modern Glassmorphic Design System, Lucide Icons.
+- **Backend**: FastAPI, SQLAlchemy 2.0, Pydantic v2, PyJWT, PyMySQL, LangChain, LangGraph, Ollama, Groq.
 - **Database**: TiDB (Distributed SQL).
 - **Media**: Cloudinary CDN.
-- **AI Engine**: Groq Cloud SDK (`llama3-70b-8192` / `mixtral-8x7b-32768`).
+- **AI Engine**: Local Ollama (`qwen2.5:7b`) with Groq Cloud fallback (`openai/gpt-oss-120b`).
+
+---
+
+## 6. Docker Deployment
+
+The entire portal can be run containerized via Docker & Docker Compose.
+
+### Quick Start with Docker Compose
+
+1. Make sure your `backend/.env` file is properly configured with your database and API credentials.
+2. Build and run all services:
+   ```bash
+   docker compose up --build -d
+   ```
+3. Access the services:
+   - **Frontend**: [http://localhost:5173](http://localhost:5173) or [http://localhost](http://localhost)
+   - **Backend API**: [http://localhost:8000](http://localhost:8000)
+   - **Interactive API Docs**: [http://localhost:8000/docs](http://localhost:8000/docs)
+4. View container logs:
+   ```bash
+   docker compose logs -f
+   ```
+5. Stop containers:
+   ```bash
+   docker compose down
+   ```

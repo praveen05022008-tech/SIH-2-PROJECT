@@ -1,5 +1,7 @@
-from pydantic import BaseModel, EmailStr
 from typing import Optional
+
+from pydantic import BaseModel, EmailStr
+
 
 class Token(BaseModel):
     access_token: str
@@ -9,9 +11,11 @@ class Token(BaseModel):
     username: str
     is_approved: bool
 
+
 class LoginRequest(BaseModel):
     username_or_email: str
     password: str
+
 
 class RegisterRequest(BaseModel):
     email: EmailStr

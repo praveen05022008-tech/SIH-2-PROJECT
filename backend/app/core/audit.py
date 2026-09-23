@@ -1,7 +1,10 @@
 import json
-from typing import Optional, Any
+from typing import Any, Optional
+
 from sqlalchemy.orm import Session
+
 from app.models.audit import AuditLog
+
 
 def log_audit(
     db: Session,
@@ -10,7 +13,7 @@ def log_audit(
     resource_type: Optional[str] = None,
     resource_id: Optional[str] = None,
     details: Optional[Any] = None,
-    ip_address: Optional[str] = None
+    ip_address: Optional[str] = None,
 ) -> AuditLog:
     details_str = None
     if details is not None:
@@ -18,14 +21,14 @@ def log_audit(
             details_str = json.dumps(details)
         else:
             details_str = str(details)
-            
+
     log_entry = AuditLog(
         user_id=user_id,
         action=action,
         resource_type=resource_type,
         resource_id=str(resource_id) if resource_id is not None else None,
         details_json=details_str,
-        ip_address=ip_address
+        ip_address=ip_address,
     )
     db.add(log_entry)
     db.commit()

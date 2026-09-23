@@ -1,6 +1,8 @@
 from datetime import datetime
 from typing import Optional
+
 from pydantic import BaseModel
+
 
 class LearningProgramBase(BaseModel):
     title: str
@@ -17,11 +19,14 @@ class LearningProgramBase(BaseModel):
     external_link: Optional[str] = None
     fee_amount: float = 0.0
 
+
 class LearningProgramCreate(LearningProgramBase):
     pass
+
 
 class LearningProgramResponse(LearningProgramBase):
     id: int
     created_at: datetime
+
     class Config:
         from_attributes = True

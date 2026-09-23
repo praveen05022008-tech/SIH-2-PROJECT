@@ -1,11 +1,14 @@
 from datetime import datetime
-from sqlalchemy import Column, Integer, String, Float, DateTime, ForeignKey, Text
-from sqlalchemy.orm import relationship
+
+from sqlalchemy import Column, DateTime, Float, ForeignKey, Integer, String, Text
+from sqlalchemy.orm import foreign, relationship
+
 from app.database import Base
+
 
 class StudentProfile(Base):
     __tablename__ = "student_profiles"
-    
+
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id"), unique=True, nullable=False)
     full_name = Column(String(255), nullable=False)
@@ -24,17 +27,23 @@ class StudentProfile(Base):
     profile_photo_url = Column(String(500), nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-    
+
     user = relationship("User", back_populates="student_profile")
     institution = relationship("Institution")
     department = relationship("Department")
-    skills = relationship("StudentSkill", back_populates="student", cascade="all, delete-orphan")
+    skills = relationship(
+        "StudentSkill",
+        primaryjoin="StudentProfile.id == foreign(StudentSkill.student_id)",
+        back_populates="student",
+        cascade="all, delete-orphan",
+    )
     assessment_results = relationship("AssessmentResult", back_populates="student", cascade="all, delete-orphan")
     portfolio = relationship("Portfolio", back_populates="student", uselist=False, cascade="all, delete-orphan")
 
+
 class FacultyProfile(Base):
     __tablename__ = "faculty_profiles"
-    
+
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id"), unique=True, nullable=False)
     full_name = Column(String(255), nullable=False)
@@ -49,14 +58,15 @@ class FacultyProfile(Base):
     cv_url = Column(String(500), nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-    
+
     user = relationship("User", back_populates="faculty_profile")
     institution = relationship("Institution")
     department = relationship("Department")
 
+
 class IndustryProfile(Base):
     __tablename__ = "industry_profiles"
-    
+
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id"), unique=True, nullable=False)
     company_name = Column(String(255), nullable=False, index=True)
@@ -71,5 +81,5 @@ class IndustryProfile(Base):
     verification_status = Column(String(50), default="pending")  # pending, verified, rejected
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-    
+
     user = relationship("User", back_populates="industry_profile")

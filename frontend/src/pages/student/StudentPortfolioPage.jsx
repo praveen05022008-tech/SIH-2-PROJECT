@@ -28,7 +28,7 @@ export function StudentPortfolioPage() {
   const [documents, setDocuments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [savingBio, setSavingBio] = useState(false);
-  
+
   // Project modal
   const [showProjectModal, setShowProjectModal] = useState(false);
   const [projTitle, setProjTitle] = useState('');

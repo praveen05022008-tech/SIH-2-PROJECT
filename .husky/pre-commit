@@ -1,0 +1,11 @@
+echo "🔍 [Husky Pre-commit] Running Python Pre-commit Hooks..."
+if [ -f "./backend/venv/bin/pre-commit" ]; then
+  ./backend/venv/bin/pre-commit run --all-files
+else
+  echo "⚠️ Python venv pre-commit binary not found, skipping python hook."
+fi
+
+echo "🚀 [Husky Pre-commit] Running Frontend Build Verification..."
+(cd frontend && npm run build)
+
+echo "✅ [Husky Pre-commit] All pre-commit checks passed successfully!"
