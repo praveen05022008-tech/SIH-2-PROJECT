@@ -1,25 +1,21 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { api } from '../../services/api';
 import { PortalLayout } from '../../components/layout/PortalLayout';
 import { useToast } from '../../context/ToastContext';
 import { getDocumentViewUrl } from '../../utils/fileUrl';
 import {
-  FolderGit2,
   FileText,
   Award,
   Plus,
   Trash2,
   Upload,
   ExternalLink,
-  Code,
-  ShieldCheck,
-  CheckCircle2,
-  Clock,
-  XCircle,
-  Sparkles
+  Code
 } from 'lucide-react';
 
 export function StudentPortfolioPage() {
+  const toast = useToast();
+
   const [portfolio, setPortfolio] = useState({
     bio: '',
     github_url: '',
@@ -54,26 +50,25 @@ export function StudentPortfolioPage() {
   const [docFile, setDocFile] = useState(null);
   const [uploadingDoc, setUploadingDoc] = useState(false);
 
-  useEffect(() => {
-    fetchPortfolio();
-    fetchDocuments();
-  }, []);
-
-  const fetchPortfolio = () => {
+  const fetchPortfolio = useCallback(() => {
     setLoading(true);
     api.get('/portfolios/my-portfolio')
       .then((data) => setPortfolio(data))
       .catch(() => {})
       .finally(() => setLoading(false));
-  };
+  }, []);
 
-  const fetchDocuments = () => {
+  const fetchDocuments = useCallback(() => {
     api.get('/documents')
       .then((data) => setDocuments(data))
       .catch(() => {});
-  };
+  }, []);
 
-  const toast = useToast();
+  useEffect(() => {
+    fetchPortfolio();
+    fetchDocuments();
+  }, [fetchPortfolio, fetchDocuments]);
+
 
   const handleUpdateBio = async (e) => {
     e.preventDefault();

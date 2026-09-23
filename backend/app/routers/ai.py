@@ -214,12 +214,19 @@ def api_career_counselor(
     db: Session = Depends(get_db)
 ):
     student = db.query(StudentProfile).filter(StudentProfile.user_id == current_user.id).first()
+    dept_name = "General"
+    if student:
+        if student.department and hasattr(student.department, 'name'):
+            dept_name = student.department.name
+        elif student.course:
+            dept_name = student.course
+
     student_profile = {
         "full_name": student.full_name if student else current_user.username,
-        "department": student.department if student else "General",
-        "degree": student.degree if student else "Student",
-        "year_of_study": student.year_of_study if student else 1,
-        "cgpa": student.cgpa if student else 8.0,
+        "department": dept_name,
+        "degree": student.course if student and student.course else "Engineering",
+        "year_of_study": student.year_of_study if student and student.year_of_study else 1,
+        "cgpa": student.cgpa if student and student.cgpa else 8.0,
         "skills": []
     }
     

@@ -1,12 +1,14 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { api } from '../../services/api';
 import { PortalLayout } from '../../components/layout/PortalLayout';
 import { useToast } from '../../context/ToastContext';
 
-import { Award, Plus, CheckCircle, Clock, Sparkles, Loader2 } from 'lucide-react';
+import { Award, Plus, Sparkles, Loader2 } from 'lucide-react';
 import { LoadingSpinner } from '../../components/common/LoadingSpinner';
 
 export function AdminAssessmentsPage() {
+  const toast = useToast();
+
   const [assessments, setAssessments] = useState([]);
   const [skills, setSkills] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -38,11 +40,7 @@ export function AdminAssessmentsPage() {
   const [qCorrect, setQCorrect] = useState('');
   const [qMarks, setQMarks] = useState(10);
 
-  useEffect(() => {
-    fetchData();
-  }, []);
-
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     setLoading(true);
     try {
       const [assList, skList] = await Promise.all([
@@ -53,9 +51,12 @@ export function AdminAssessmentsPage() {
       setSkills(skList);
     } catch {}
     setLoading(false);
-  };
+  }, []);
 
-  const toast = useToast();
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
 
   const handleCreateAssessment = async (e) => {
     e.preventDefault();

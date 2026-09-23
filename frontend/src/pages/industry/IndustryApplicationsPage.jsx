@@ -1,13 +1,14 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { api } from '../../services/api';
 import { PortalLayout } from '../../components/layout/PortalLayout';
 import { useToast } from '../../context/ToastContext';
 import { getDocumentViewUrl } from '../../utils/fileUrl';
-import { Users, FileText, CheckCircle, XCircle, Clock, Sparkles, HelpCircle, Loader2 } from 'lucide-react';
+import { Users, FileText, CheckCircle, Sparkles, Loader2 } from 'lucide-react';
 import { LoadingSpinner } from '../../components/common/LoadingSpinner';
 
 export function IndustryApplicationsPage() {
+  const toast = useToast();
   const [searchParams] = useSearchParams();
   const oppIdParam = searchParams.get('opportunity_id');
 
@@ -27,17 +28,7 @@ export function IndustryApplicationsPage() {
   const [aiInsights, setAiInsights] = useState(null);
   const [loadingAi, setLoadingAi] = useState(false);
 
-  useEffect(() => {
-    api.get('/opportunities?my_only=true')
-      .then((data) => setOpportunities(data))
-      .catch(() => {});
-  }, []);
-
-  useEffect(() => {
-    fetchApplications();
-  }, [selectedOppId, statusFilter]);
-
-  const fetchApplications = () => {
+  const fetchApplications = useCallback(() => {
     setLoading(true);
     let url = '/applications';
     const params = [];
@@ -49,7 +40,17 @@ export function IndustryApplicationsPage() {
       .then((data) => setApplications(data))
       .catch(() => {})
       .finally(() => setLoading(false));
-  };
+  }, [selectedOppId, statusFilter]);
+
+  useEffect(() => {
+    api.get('/opportunities?my_only=true')
+      .then((data) => setOpportunities(data))
+      .catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    fetchApplications();
+  }, [fetchApplications]);
 
   const handleOpenReview = (app) => {
     setSelectedApp(app);
@@ -58,7 +59,6 @@ export function IndustryApplicationsPage() {
     setAiInsights(null);
   };
 
-  const toast = useToast();
 
   const fetchAICandidateInsights = async () => {
     if (!selectedApp) return;

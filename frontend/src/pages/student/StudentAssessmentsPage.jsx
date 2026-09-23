@@ -1,10 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../../services/api';
 import { PortalLayout } from '../../components/layout/PortalLayout';
-import { useToast } from '../../context/ToastContext';
 import { LoadingSpinner } from '../../components/common/LoadingSpinner';
-import { Award, Clock, CheckCircle2, AlertCircle, Play, ChevronRight, HelpCircle } from 'lucide-react';
+import { Award, Clock, Play } from 'lucide-react';
 
 export function StudentAssessmentsPage() {
   const [assessments, setAssessments] = useState([]);
@@ -17,17 +16,18 @@ export function StudentAssessmentsPage() {
 
   const navigate = useNavigate();
 
-  useEffect(() => {
-    fetchAssessments();
-  }, []);
-
-  const fetchAssessments = () => {
+  const fetchAssessments = useCallback(() => {
     setLoading(true);
     api.get('/assessments')
       .then((data) => setAssessments(data))
       .catch((err) => setError(err.message))
       .finally(() => setLoading(false));
-  };
+  }, []);
+
+  useEffect(() => {
+    fetchAssessments();
+  }, [fetchAssessments]);
+
 
   const handleStartTest = (test) => {
     setActiveTest(test);

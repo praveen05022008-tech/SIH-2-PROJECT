@@ -460,6 +460,30 @@ textarea.form-control {
   font-size: 13px;
 }
 
+/* Card Modern Polish & Hover Lift */
+.card {
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.card:hover {
+  box-shadow: 0 8px 24px -4px rgba(0, 0, 0, 0.08);
+}
+
+.btn {
+  transition: all 0.15s ease-in-out;
+}
+
+.btn:active {
+  transform: scale(0.98);
+}
+
+/* Smooth Focus States */
+.form-control:focus {
+  border-color: #3B5BDB;
+  box-shadow: 0 0 0 3px rgba(59, 91, 219, 0.15);
+  outline: none;
+}
+
 /* Responsive */
 @media (max-width: 900px) {
   .app-container {
@@ -500,4 +524,5 @@ textarea.form-control {
     transform: rotate(360deg);
   }
 }
+
 

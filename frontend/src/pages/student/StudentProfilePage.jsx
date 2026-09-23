@@ -9,6 +9,7 @@ import { LoadingSpinner } from '../../components/common/LoadingSpinner';
 
 
 export function StudentProfilePage() {
+  const toast = useToast();
   const [profile, setProfile] = useState({
     full_name: '',
     phone: '',
@@ -91,8 +92,6 @@ export function StudentProfilePage() {
       setUploadingResume(false);
     }
   };
-
-  const toast = useToast();
 
   const handleExtractResumeSkills = async (e) => {
     e.preventDefault();

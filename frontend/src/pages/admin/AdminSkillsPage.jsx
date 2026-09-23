@@ -7,6 +7,7 @@ import { Award, Plus } from 'lucide-react';
 import { LoadingSpinner } from '../../components/common/LoadingSpinner';
 
 export function AdminSkillsPage() {
+  const toast = useToast();
   const [skills, setSkills] = useState([]);
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -21,10 +22,6 @@ export function AdminSkillsPage() {
   const [skillRel, setSkillRel] = useState('high');
   const [skillDesc, setSkillDesc] = useState('');
 
-  useEffect(() => {
-    fetchData();
-  }, []);
-
   const fetchData = async () => {
     setLoading(true);
     try {
@@ -38,7 +35,10 @@ export function AdminSkillsPage() {
     setLoading(false);
   };
 
-  const toast = useToast();
+  useEffect(() => {
+    fetchData();
+  }, []);
+
 
   const handleCreateCategory = async (e) => {
     e.preventDefault();

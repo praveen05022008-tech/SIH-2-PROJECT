@@ -3,14 +3,14 @@
  */
 export function getDocumentViewUrl(docOrUrl, docId) {
   if (docId) {
-    return `http://localhost:8000/api/v1/documents/${docId}/file`;
+    return `/api/v1/documents/${docId}/file`;
   }
   if (!docOrUrl) return '#';
 
   let targetUrl = '';
   if (typeof docOrUrl === 'object') {
     if (docOrUrl.id) {
-      return `http://localhost:8000/api/v1/documents/${docOrUrl.id}/file`;
+      return `/api/v1/documents/${docOrUrl.id}/file`;
     }
     targetUrl = docOrUrl.file_path || docOrUrl.resume_url || '';
   } else if (typeof docOrUrl === 'string') {
@@ -19,9 +19,18 @@ export function getDocumentViewUrl(docOrUrl, docId) {
 
   if (!targetUrl) return '#';
 
-  if (targetUrl.startsWith('/uploads')) {
-    return `http://localhost:8000${targetUrl}`;
+  if (targetUrl.startsWith('http://') || targetUrl.startsWith('https://')) {
+    return targetUrl;
   }
 
-  return targetUrl;
+  if (targetUrl.startsWith('/uploads')) {
+    return targetUrl;
+  }
+
+  if (targetUrl.startsWith('/api')) {
+    return targetUrl;
+  }
+
+  return `/uploads/${targetUrl.replace(/^\/+/, '')}`;
 }
+

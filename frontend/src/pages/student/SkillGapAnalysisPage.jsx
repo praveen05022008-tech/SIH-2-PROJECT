@@ -1,13 +1,15 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { api } from '../../services/api';
 import { PortalLayout } from '../../components/layout/PortalLayout';
 import { useToast } from '../../context/ToastContext';
 import { LoadingSpinner } from '../../components/common/LoadingSpinner';
 
-import { Compass, CheckCircle2, AlertCircle, BookOpen, ArrowRight, Sparkles, Loader2, Calendar, Target, ShieldCheck } from 'lucide-react';
+import { Compass, CheckCircle2, ArrowRight, Sparkles, Clock, AlertTriangle, XCircle } from 'lucide-react';
 import { AICareerCounselor } from '../../components/AICareerCounselor';
 
 export function SkillGapAnalysisPage() {
+  const toast = useToast();
+
   const [careerRoles, setCareerRoles] = useState([]);
   const [selectedRoleId, setSelectedRoleId] = useState('');
   const [analysis, setAnalysis] = useState(null);
@@ -19,6 +21,16 @@ export function SkillGapAnalysisPage() {
   const [careerInterests, setCareerInterests] = useState('');
   const [aiRoadmap, setAiRoadmap] = useState(null);
   const [aiLoading, setAiLoading] = useState(false);
+
+  const runAnalysis = useCallback(async (roleId) => {
+    if (!roleId) return;
+    setLoading(true);
+    try {
+      const data = await api.get(`/skills/gap-analysis/${roleId}`);
+      setAnalysis(data);
+    } catch {}
+    setLoading(false);
+  }, []);
 
   useEffect(() => {
     api.get('/skills/career-roles')
@@ -32,17 +44,7 @@ export function SkillGapAnalysisPage() {
       })
       .catch(() => {})
       .finally(() => setInitialLoading(false));
-  }, []);
-
-  const runAnalysis = async (roleId) => {
-    if (!roleId) return;
-    setLoading(true);
-    try {
-      const data = await api.get(`/skills/gap-analysis/${roleId}`);
-      setAnalysis(data);
-    } catch {}
-    setLoading(false);
-  };
+  }, [runAnalysis]);
 
   const handleRoleChange = (e) => {
     const rId = e.target.value;
@@ -52,7 +54,6 @@ export function SkillGapAnalysisPage() {
     runAnalysis(rId);
   };
 
-  const toast = useToast();
 
   const generateAIRoadmap = async () => {
     const target = customRoleInput.trim() || (analysis ? analysis.career_role : 'Software Engineer');
