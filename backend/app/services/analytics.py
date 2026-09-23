@@ -1,5 +1,8 @@
 from typing import Any, Dict, List
 
+from sqlalchemy import func
+from sqlalchemy.orm import Session
+
 from app.models.assessment import AssessmentResult
 from app.models.audit import AuditLog
 from app.models.collaboration import Collaboration
@@ -8,8 +11,6 @@ from app.models.internship import Internship
 from app.models.opportunity import Application, Opportunity
 from app.models.profile import FacultyProfile, IndustryProfile, StudentProfile
 from app.models.user import Department, Institution, User
-from sqlalchemy import func
-from sqlalchemy.orm import Session
 
 
 def get_admin_analytics(db: Session) -> Dict[str, Any]:

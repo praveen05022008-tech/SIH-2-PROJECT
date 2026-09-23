@@ -1,5 +1,8 @@
 from typing import List, Optional
 
+from fastapi import APIRouter, Depends, HTTPException, Query, status
+from sqlalchemy.orm import Session
+
 from app.core.audit import log_audit
 from app.core.deps import get_current_user, require_role
 from app.database import get_db
@@ -9,8 +12,6 @@ from app.models.skill import Skill
 from app.models.user import User
 from app.schemas.opportunity import OpportunityCreate, OpportunityResponse, OpportunitySkillBase
 from app.services.matching import evaluate_student_opportunity_match
-from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy.orm import Session
 
 router = APIRouter(prefix="/opportunities", tags=["Opportunities (Internships & Jobs)"])
 

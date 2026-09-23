@@ -1,10 +1,11 @@
 import logging
 from typing import Optional
 
+from sqlalchemy.orm import Session
+
 from app.models.notification import Notification
 from app.models.user import User
 from app.services.email_service import send_generic_notification_email
-from sqlalchemy.orm import Session
 
 logger = logging.getLogger(__name__)
 

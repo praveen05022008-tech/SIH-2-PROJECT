@@ -1,6 +1,7 @@
-from app.database import Base
 from sqlalchemy import Boolean, Column, Float, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import foreign, relationship
+
+from app.database import Base
 
 
 class SkillCategory(Base):

@@ -1,8 +1,9 @@
 from datetime import datetime
 from typing import Optional
 
-from app.schemas.opportunity import OpportunityResponse
 from pydantic import BaseModel
+
+from app.schemas.opportunity import OpportunityResponse
 
 
 class ApplicationCreate(BaseModel):

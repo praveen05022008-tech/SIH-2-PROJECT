@@ -1,3 +1,6 @@
+from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy.orm import Session
+
 from app.core.audit import log_audit
 from app.core.deps import get_current_user
 from app.database import get_db
@@ -11,8 +14,6 @@ from app.schemas.profile import (
     StudentProfileResponse,
     StudentProfileUpdate,
 )
-from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.orm import Session
 
 router = APIRouter(prefix="/profiles", tags=["Profiles"])
 

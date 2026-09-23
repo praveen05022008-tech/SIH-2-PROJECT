@@ -2,6 +2,10 @@ import os
 import shutil
 from typing import List, Optional
 
+from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
+from fastapi.responses import FileResponse, RedirectResponse
+from sqlalchemy.orm import Session
+
 from app.config import settings
 from app.core.audit import log_audit
 from app.core.deps import get_current_user, require_role
@@ -12,9 +16,6 @@ from app.models.user import User
 from app.schemas.document import DocumentResponse, DocumentVerificationCreate, DocumentVerificationResponse
 from app.services.cloudinary_service import upload_file_to_cloudinary
 from app.services.notification import send_notification
-from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
-from fastapi.responses import FileResponse, RedirectResponse
-from sqlalchemy.orm import Session
 
 router = APIRouter(prefix="/documents", tags=["Document Management & Verification"])
 

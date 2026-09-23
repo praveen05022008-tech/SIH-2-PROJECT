@@ -4,6 +4,7 @@ from typing import Any, Dict, Optional
 
 import cloudinary
 import cloudinary.uploader
+
 from app.config import settings
 
 logger = logging.getLogger(__name__)

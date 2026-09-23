@@ -1,5 +1,8 @@
 from typing import List, Optional
 
+from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy.orm import Session
+
 from app.core.deps import get_current_user, require_role
 from app.database import get_db
 from app.models.profile import StudentProfile
@@ -15,8 +18,6 @@ from app.schemas.skill import (
     StudentSkillResponse,
 )
 from app.services.matching import perform_skill_gap_analysis
-from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.orm import Session
 
 router = APIRouter(prefix="/skills", tags=["Skills & Career Intelligence"])
 

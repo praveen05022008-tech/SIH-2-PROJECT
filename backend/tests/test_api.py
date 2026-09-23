@@ -1,9 +1,10 @@
 import time
 
 import pytest
+from fastapi.testclient import TestClient
+
 from app.core.security import create_access_token
 from app.main import app
-from fastapi.testclient import TestClient
 
 client = TestClient(app)
 

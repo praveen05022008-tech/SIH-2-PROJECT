@@ -1,3 +1,6 @@
+from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy.orm import Session
+
 from app.core.deps import get_current_user, require_role
 from app.database import get_db
 from app.models.user import User
@@ -13,8 +16,6 @@ from app.services.analytics import (
     get_institution_analytics,
     get_student_analytics,
 )
-from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.orm import Session
 
 router = APIRouter(prefix="/analytics", tags=["Real-time Analytics"])
 

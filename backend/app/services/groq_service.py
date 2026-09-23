@@ -4,8 +4,9 @@ import urllib.error
 import urllib.request
 from typing import Any, Dict, List, Optional
 
-from app.config import settings
 from groq import Groq
+
+from app.config import settings
 
 logger = logging.getLogger(__name__)
 

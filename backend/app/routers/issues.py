@@ -1,15 +1,16 @@
 from datetime import datetime
 from typing import List, Optional
 
+from fastapi import APIRouter, Depends, HTTPException, status
+from pydantic import BaseModel
+from sqlalchemy.orm import Session
+
 from app.core.deps import get_current_user, require_role
 from app.database import get_db
 from app.models.issue import IssueReport
 from app.models.user import User
 from app.services.email_service import send_issue_status_update_email
 from app.services.notification import send_notification
-from fastapi import APIRouter, Depends, HTTPException, status
-from pydantic import BaseModel
-from sqlalchemy.orm import Session
 
 router = APIRouter(prefix="/issues", tags=["Issue Reporting & Triage Governance"])
 

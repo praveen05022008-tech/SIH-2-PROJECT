@@ -1,13 +1,14 @@
 from typing import List, Optional
 
+from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy.orm import Session
+
 from app.core.audit import log_audit
 from app.core.deps import get_current_user, require_role
 from app.database import get_db
 from app.models.learning import LearningProgram
 from app.models.user import User
 from app.schemas.learning import LearningProgramCreate, LearningProgramResponse
-from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.orm import Session
 
 router = APIRouter(prefix="/learning-programs", tags=["Learning Programs Marketplace"])
 

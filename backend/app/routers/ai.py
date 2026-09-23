@@ -2,6 +2,10 @@ import io
 import json
 from typing import Any, Dict, List, Optional
 
+from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
+from pydantic import BaseModel
+from sqlalchemy.orm import Session
+
 from app.agents import create_candidate_matching_graph, create_skill_intelligence_graph
 from app.core.deps import get_current_user, require_role
 from app.database import get_db
@@ -18,9 +22,6 @@ from app.services.groq_service import (
     extract_skills_from_resume_text,
     generate_assessment_quiz,
 )
-from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
-from pydantic import BaseModel
-from sqlalchemy.orm import Session
 
 router = APIRouter(prefix="/ai", tags=["Groq AI Services"])
 

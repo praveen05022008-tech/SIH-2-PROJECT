@@ -1,7 +1,8 @@
 from datetime import datetime
 
-from app.database import Base
 from sqlalchemy import Boolean, Column, DateTime, Float, Integer, String, Text
+
+from app.database import Base
 
 
 class LearningProgram(Base):

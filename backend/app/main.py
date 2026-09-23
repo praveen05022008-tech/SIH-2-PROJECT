@@ -1,5 +1,9 @@
 import os
 
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+
 from app.config import settings
 from app.initial_setup import init_db
 
@@ -22,9 +26,6 @@ from app.routers import (
     skills,
     users,
 )
-from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
-from fastapi.staticfiles import StaticFiles
 
 app = FastAPI(
     title=settings.PROJECT_NAME,

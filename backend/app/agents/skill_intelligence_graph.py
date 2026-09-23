@@ -2,17 +2,18 @@ import json
 import logging
 from typing import Any, Dict, List, Optional
 
+from langchain_core.messages import HumanMessage, SystemMessage
+from langchain_groq import ChatGroq
+from langchain_ollama import ChatOllama
+from langgraph.graph import END, START, StateGraph
+from sqlalchemy.orm import Session
+
 from app.agents.state import SkillGapState
 from app.config import settings
 from app.models.learning import LearningProgram
 from app.models.profile import StudentProfile
 from app.models.skill import CareerRole, CareerRoleSkill, Skill, StudentSkill
 from app.services.matching import LEVEL_VALUES
-from langchain_core.messages import HumanMessage, SystemMessage
-from langchain_groq import ChatGroq
-from langchain_ollama import ChatOllama
-from langgraph.graph import END, START, StateGraph
-from sqlalchemy.orm import Session
 
 logger = logging.getLogger(__name__)
 

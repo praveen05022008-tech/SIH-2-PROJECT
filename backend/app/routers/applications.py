@@ -1,5 +1,8 @@
 from typing import List, Optional
 
+from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy.orm import Session
+
 from app.core.audit import log_audit
 from app.core.deps import get_current_user, require_role
 from app.database import get_db
@@ -15,8 +18,6 @@ from app.services.email_service import (
 )
 from app.services.matching import evaluate_student_opportunity_match
 from app.services.notification import send_notification
-from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.orm import Session
 
 router = APIRouter(prefix="/applications", tags=["Applications & Recruitment Workflow"])
 

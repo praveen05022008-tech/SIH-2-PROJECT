@@ -1,10 +1,11 @@
 from typing import Any, Dict, List, Tuple
 
+from sqlalchemy.orm import Session
+
 from app.models.learning import LearningProgram
 from app.models.opportunity import Opportunity, OpportunitySkill
 from app.models.profile import StudentProfile
 from app.models.skill import CareerRole, CareerRoleSkill, Skill, StudentSkill
-from sqlalchemy.orm import Session
 
 LEVEL_VALUES = {"beginner": 1, "intermediate": 2, "advanced": 3, "expert": 4}
 

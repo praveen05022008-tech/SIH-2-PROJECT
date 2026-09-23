@@ -1,8 +1,9 @@
 from datetime import datetime
 
-from app.database import Base
 from sqlalchemy import Boolean, Column, DateTime, Float, ForeignKey, Integer, String, Text, UniqueConstraint
 from sqlalchemy.orm import relationship
+
+from app.database import Base
 
 
 class Opportunity(Base):

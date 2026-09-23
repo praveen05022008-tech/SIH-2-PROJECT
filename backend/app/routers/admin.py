@@ -3,6 +3,10 @@ import io
 import uuid
 from typing import Any, Dict, List, Optional
 
+from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
+from pydantic import BaseModel
+from sqlalchemy.orm import Session
+
 from app.config import settings
 from app.core.deps import require_role
 from app.core.security import hash_password
@@ -12,9 +16,6 @@ from app.models.profile import FacultyProfile, StudentProfile
 from app.models.user import Department, Institution, User
 from app.schemas.user import UserResponse
 from app.services.email_service import _build_html_template, send_bulk_onboarding_email, send_email_sync
-from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
-from pydantic import BaseModel
-from sqlalchemy.orm import Session
 
 router = APIRouter(prefix="/admin", tags=["System Administration"])
 

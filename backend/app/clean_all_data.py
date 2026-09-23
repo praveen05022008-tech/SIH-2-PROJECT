@@ -7,11 +7,12 @@ import sys
 
 import cloudinary
 import cloudinary.api
+from sqlalchemy import text
+
 from app.config import settings
 from app.core.security import hash_password
 from app.database import Base, SessionLocal, engine
 from app.models.user import Role, User
-from sqlalchemy import text
 
 
 def clean_database():

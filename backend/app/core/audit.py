@@ -1,8 +1,9 @@
 import json
 from typing import Any, Optional
 
-from app.models.audit import AuditLog
 from sqlalchemy.orm import Session
+
+from app.models.audit import AuditLog
 
 
 def log_audit(
