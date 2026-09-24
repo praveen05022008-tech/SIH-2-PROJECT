@@ -3,6 +3,7 @@ import { useParams, Link } from 'react-router-dom';
 import { api } from '../../services/api';
 import { Award, CheckCircle2, ShieldCheck, AlertCircle, Building2, Calendar, User, ArrowLeft, Download } from 'lucide-react';
 import { LoadingSpinner } from '../../components/common/LoadingSpinner';
+import { CertificateDocument } from '../../components/common/CertificateDocument';
 
 export function CertificateVerificationPage() {
   const { hash } = useParams();
@@ -176,6 +177,11 @@ export function CertificateVerificationPage() {
                 >
                   <Download size={14} /> Download Certificate
                 </button>
+              </div>
+
+              {/* Verified Certificate Visual Render */}
+              <div style={{ width: '100%', marginBottom: '12px' }}>
+                <CertificateDocument certificate={cert} />
               </div>
 
               {/* Certificate Details Card */}

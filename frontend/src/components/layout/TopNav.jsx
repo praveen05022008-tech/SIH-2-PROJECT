@@ -2,7 +2,7 @@ import React from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { Shield, AlertTriangle, Menu, ChevronDown } from 'lucide-react';
 
-export function TopNav({ title, onToggleMobileSidebar }) {
+export function TopNav({ title, subtitle, onToggleMobileSidebar }) {
   const { user } = useAuth();
 
   if (!user) return null;
@@ -11,13 +11,13 @@ export function TopNav({ title, onToggleMobileSidebar }) {
     <header
       className="topbar"
       style={{
-        height: '70px',
+        minHeight: '74px',
         backgroundColor: '#FFFFFF',
         borderBottom: '1px solid #EEF2F6',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
-        padding: '0 32px',
+        padding: '12px 32px',
         position: 'sticky',
         top: 0,
         zIndex: 20
@@ -33,30 +33,39 @@ export function TopNav({ title, onToggleMobileSidebar }) {
         >
           <Menu size={20} />
         </button>
-        <h1 style={{ fontSize: '20px', fontWeight: 800, color: '#0F172A', letterSpacing: '-0.3px', margin: 0 }}>
-          {title || 'Collaboration Portal'}
-        </h1>
-        {!user.is_approved && user.role !== 'admin' && (
-          <span
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '6px',
-              backgroundColor: '#FEF08A',
-              color: '#854D0E',
-              fontSize: '11px',
-              fontWeight: 600,
-              padding: '3px 8px',
-              borderRadius: '4px',
-              border: '1px solid #FDE047'
-            }}
-          >
-            <AlertTriangle size={13} />
-            <span style={{ display: 'none' }} className="d-sm-inline">
-              Pending Admin Approval
-            </span>
-          </span>
-        )}
+        <div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <h1 style={{ fontSize: '19px', fontWeight: 800, color: '#0F172A', letterSpacing: '-0.3px', margin: 0 }}>
+              {title || 'Collaboration Portal'}
+            </h1>
+            {!user.is_approved && user.role !== 'admin' && (
+              <span
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  backgroundColor: '#FEF08A',
+                  color: '#854D0E',
+                  fontSize: '11px',
+                  fontWeight: 600,
+                  padding: '3px 8px',
+                  borderRadius: '4px',
+                  border: '1px solid #FDE047'
+                }}
+              >
+                <AlertTriangle size={13} />
+                <span style={{ display: 'none' }} className="d-sm-inline">
+                  Pending Admin Approval
+                </span>
+              </span>
+            )}
+          </div>
+          {subtitle && (
+            <p style={{ margin: '3px 0 0', fontSize: '12px', color: '#64748B', fontWeight: 500 }}>
+              {subtitle}
+            </p>
+          )}
+        </div>
       </div>
 
       <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>

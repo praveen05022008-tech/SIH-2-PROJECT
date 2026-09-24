@@ -5,7 +5,7 @@ import { Sidebar } from './Sidebar';
 import { TopNav } from './TopNav';
 import { LoadingSpinner } from '../common/LoadingSpinner';
 
-export function PortalLayout({ children, title, allowedRoles }) {
+export function PortalLayout({ children, title, subtitle, allowedRoles }) {
   const { user, loading } = useAuth();
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const location = useLocation();
@@ -35,7 +35,7 @@ export function PortalLayout({ children, title, allowedRoles }) {
     <div className="app-container">
       <Sidebar isOpen={mobileSidebarOpen} onClose={() => setMobileSidebarOpen(false)} />
       <div className="main-content">
-        <TopNav title={title} onToggleMobileSidebar={() => setMobileSidebarOpen((prev) => !prev)} />
+        <TopNav title={title} subtitle={subtitle} onToggleMobileSidebar={() => setMobileSidebarOpen((prev) => !prev)} />
         <main className="page-body">
           {!user.is_approved && user.role !== 'admin' && (
             <div style={{

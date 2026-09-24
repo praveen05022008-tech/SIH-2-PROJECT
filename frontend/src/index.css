@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@700;800;900&family=Playfair+Display:ital,wght@0,700;0,800;0,900;1,400;1,700&display=swap');
+
 :root {
   --color-primary: #0F172A;
   --color-secondary: #2563EB;
@@ -755,5 +757,51 @@ textarea.form-control {
   100% {
     stroke-dashoffset: 80;
     transform: rotate(360deg);
+  }
+}
+
+/* ─── High-Fidelity Certificate Print Stylesheet ─── */
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  .certificate-root-container,
+  .certificate-root-container * {
+    visibility: visible;
+  }
+  .certificate-modal-overlay {
+    position: static !important;
+    background: transparent !important;
+    padding: 0 !important;
+    display: block !important;
+  }
+  .certificate-modal-card {
+    box-shadow: none !important;
+    border-radius: 0 !important;
+    max-width: 100% !important;
+  }
+  .certificate-control-bar,
+  header,
+  nav,
+  .sidebar,
+  .topbar {
+    display: none !important;
+  }
+  .certificate-root-container {
+    position: absolute !important;
+    left: 0 !important;
+    top: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    box-shadow: none !important;
+    page-break-inside: avoid;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+  @page {
+    size: landscape;
+    margin: 0.5cm;
   }
 }
