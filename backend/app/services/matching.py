@@ -99,11 +99,36 @@ def evaluate_student_opportunity_match(
     else:
         match_score = round(skill_coverage_pct, 1)
 
+    # Find bridge learning programs for missing skills
+    recommended_programs = []
+    if missing_skills:
+        clean_missing = [m.split("(")[0].strip().lower() for m in missing_skills]
+        programs = (
+            db.query(LearningProgram)
+            .filter(LearningProgram.status == "published", LearningProgram.target_audience.in_(["student", "both"]))
+            .all()
+        )
+        for prog in programs:
+            cov = (prog.skills_covered or "").lower()
+            title_low = (prog.title or "").lower()
+            if any(ms in cov or ms in title_low for ms in clean_missing):
+                recommended_programs.append(
+                    {
+                        "id": prog.id,
+                        "title": prog.title,
+                        "provider": prog.provider_name,
+                        "type": prog.program_type,
+                        "duration": prog.duration,
+                        "skills_covered": prog.skills_covered,
+                    }
+                )
+
     return {
         "match_score": match_score,
         "match_reasons": reasons,
         "missing_skills": missing_skills,
         "is_eligible": is_eligible,
+        "recommended_programs": recommended_programs[:3],
     }
 
 

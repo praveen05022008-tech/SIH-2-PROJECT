@@ -6,6 +6,8 @@ from sqlalchemy.orm import Session
 from app.core.audit import log_audit
 from app.core.deps import get_current_user
 from app.database import get_db
+from app.models.document import Document
+from app.models.learning import Certificate
 from app.models.portfolio import Certification, Portfolio, Project
 from app.models.profile import StudentProfile
 from app.models.user import User
@@ -160,6 +162,39 @@ def get_public_verified_portfolio(identifier: str, db: Session = Depends(get_db)
             }
         )
 
+    # Extract verified learning course certificates
+    course_certs = db.query(Certificate).filter(Certificate.student_id == user.id, Certificate.status == "valid").all()
+    learning_certificates = [
+        {
+            "certificate_number": c.certificate_number,
+            "program_title": c.program_title,
+            "program_type": c.program_type,
+            "issuer_name": c.issuer_name,
+            "issue_date": c.issue_date.strftime("%b %d, %Y") if c.issue_date else "Recently",
+            "verification_hash": c.verification_hash,
+            "skills": c.skills,
+        }
+        for c in course_certs
+    ]
+
+    # Extract verified documents
+    verified_docs = (
+        db.query(Document)
+        .filter(Document.owner_user_id == user.id)
+        .join(Document.verifications)
+        .filter(Document.verifications.any(verification_status="verified"))
+        .all()
+    )
+    documents_summary = [
+        {
+            "id": d.id,
+            "title": d.title,
+            "document_type": d.document_type,
+            "verified": True,
+        }
+        for d in verified_docs
+    ]
+
     projects = []
     certifications = []
     bio = ""
@@ -199,12 +234,17 @@ def get_public_verified_portfolio(identifier: str, db: Session = Depends(get_db)
         "institution_name": student.institution.name if student.institution else "Academic Institution",
         "graduation_year": student.graduation_year or 2026,
         "cgpa": student.cgpa,
+        "department_name": student.department.name if student.department else "Engineering",
+        "resume_url": student.resume_url,
+        "skills": student.skills,
         "bio": bio,
         "github_url": github_url,
         "linkedin_url": linkedin_url,
         "website_url": website_url,
         "verified_skills": verified_skills,
         "assessments": assessments,
+        "learning_certificates": learning_certificates,
+        "documents_summary": documents_summary,
         "projects": projects,
         "certifications": certifications,
     }

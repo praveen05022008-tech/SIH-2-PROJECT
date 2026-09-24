@@ -14,6 +14,7 @@ import {
   Loader2,
   CheckCircle2,
   AlertCircle,
+  FolderGit2,
 } from 'lucide-react';
 import { LoadingSpinner } from '../../components/common/LoadingSpinner';
 
@@ -256,6 +257,7 @@ export function InstitutionStudentsPage() {
                   <th>Account Status</th>
                   <th>Approval Status</th>
                   <th>Enrolled Date</th>
+                  <th>Digital Portfolio</th>
                 </tr>
               </thead>
               <tbody>
@@ -281,6 +283,22 @@ export function InstitutionStudentsPage() {
                       </span>
                     </td>
                     <td>{new Date(s.created_at).toLocaleDateString()}</td>
+                    <td>
+                      {s.role === 'student' ? (
+                        <a
+                          href={`/portfolio/${s.username || s.id}`}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="btn btn-outline btn-sm"
+                          style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '11.5px', padding: '4px 10px', color: '#2563EB', borderColor: '#BFDBFE', backgroundColor: '#EFF6FF' }}
+                          title="View Verified Student Digital Portfolio"
+                        >
+                          <FolderGit2 size={12} /> View Portfolio
+                        </a>
+                      ) : (
+                        <span style={{ color: '#94A3B8', fontSize: '12px' }}>Faculty Profile</span>
+                      )}
+                    </td>
                   </tr>
                 ))}
               </tbody>

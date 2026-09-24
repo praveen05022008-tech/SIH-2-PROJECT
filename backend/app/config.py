@@ -31,8 +31,15 @@ class Settings(BaseSettings):
     GROQ_API_KEY: str = os.getenv("GROQ_API_KEY", "")
     GROQ_MODEL: str = os.getenv("GROQ_MODEL", "openai/gpt-oss-120b")
 
-    # Uploads fallback local directory
-    UPLOAD_DIR: str = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "uploads")
+    # Uploads fallback local directory (on Vercel Serverless, use /tmp)
+    UPLOAD_DIR: str = os.getenv(
+        "UPLOAD_DIR",
+        (
+            "/tmp/uploads"
+            if bool(os.getenv("VERCEL"))
+            else os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "uploads")
+        ),
+    )
 
     # SMTP Transactional Email Configuration
     SMTP_HOST: str = os.getenv("SMTP_HOST", "smtp.gmail.com")
@@ -53,5 +60,8 @@ class Settings(BaseSettings):
 
 settings = Settings()
 
-# Ensure uploads directory exists for fallback/temp files
-os.makedirs(settings.UPLOAD_DIR, exist_ok=True)
+# Ensure uploads directory exists for fallback/temp files safely
+try:
+    os.makedirs(settings.UPLOAD_DIR, exist_ok=True)
+except Exception:
+    pass

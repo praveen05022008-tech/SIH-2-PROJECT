@@ -87,7 +87,7 @@ export function PostOpportunityPage() {
     try {
       await api.post('/opportunities', payload);
       setMsg({ type: 'success', text: isFacultyOffering ? 'Faculty Sabbatical / Training published successfully!' : 'Opportunity published successfully!' });
-      setTimeout(() => navigate('/industry/dashboard'), 1200);
+      setTimeout(() => navigate('/industry/opportunities'), 1200);
     } catch (err) {
       setMsg({ type: 'error', text: err.message || 'Failed to post opportunity.' });
     } finally {
@@ -150,29 +150,57 @@ export function PostOpportunityPage() {
           boxShadow: '0 4px 20px rgba(37, 99, 235, 0.05), 0 1px 3px rgba(0, 0, 0, 0.02)',
           position: 'relative',
           overflow: 'hidden',
-          marginBottom: '20px'
+          marginBottom: '20px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          flexWrap: 'wrap',
+          gap: '14px'
         }}
       >
-        <h2
+        <div>
+          <h2
+            style={{
+              fontSize: '20px',
+              fontWeight: 800,
+              color: '#0F172A',
+              letterSpacing: '-0.3px',
+              margin: '0 0 6px 0'
+            }}
+          >
+            Opportunity Details & Competency Requirements
+          </h2>
+          <p
+            style={{
+              fontSize: '13.5px',
+              color: '#475569',
+              margin: 0
+            }}
+          >
+            Provide complete details to publish your job or internship opportunity.
+          </p>
+        </div>
+
+        <button
+          type="button"
+          onClick={() => navigate('/industry/opportunities')}
           style={{
-            fontSize: '20px',
-            fontWeight: 800,
-            color: '#0F172A',
-            letterSpacing: '-0.3px',
-            margin: '0 0 6px 0'
+            backgroundColor: '#FFFFFF',
+            color: '#2563EB',
+            border: '1px solid #BFDBFE',
+            padding: '9px 18px',
+            borderRadius: '8px',
+            fontWeight: 700,
+            fontSize: '13px',
+            cursor: 'pointer',
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '6px',
+            boxShadow: '0 1px 3px rgba(0,0,0,0.05)'
           }}
         >
-          Opportunity Details & Competency Requirements
-        </h2>
-        <p
-          style={{
-            fontSize: '13.5px',
-            color: '#475569',
-            margin: 0
-          }}
-        >
-          Provide complete details to publish your job or internship opportunity.
-        </p>
+          View All Postings
+        </button>
       </div>
 
       {/* ─── Form Container Card ─── */}

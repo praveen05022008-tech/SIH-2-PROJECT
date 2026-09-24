@@ -42,6 +42,28 @@ class OpportunityCreate(OpportunityBase):
     skills: List[OpportunitySkillBase] = []
 
 
+class OpportunityUpdate(BaseModel):
+    title: Optional[str] = None
+    company_name: Optional[str] = None
+    type: Optional[str] = None
+    description: Optional[str] = None
+    responsibilities: Optional[str] = None
+    required_qualifications: Optional[str] = None
+    eligibility_cgpa: Optional[float] = None
+    eligibility_year: Optional[int] = None
+    target_departments: Optional[str] = None
+    min_experience_years: Optional[int] = None
+    academic_qualification: Optional[str] = None
+    location: Optional[str] = None
+    work_mode: Optional[str] = None
+    duration: Optional[str] = None
+    stipend_salary: Optional[str] = None
+    openings_count: Optional[int] = None
+    deadline: Optional[datetime] = None
+    status: Optional[str] = None
+    skills: Optional[List[OpportunitySkillBase]] = None
+
+
 class OpportunityResponse(OpportunityBase):
     id: int
     posted_by_user_id: int
@@ -53,6 +75,7 @@ class OpportunityResponse(OpportunityBase):
     match_reasons: Optional[List[str]] = None
     missing_skills: Optional[List[str]] = None
     is_eligible: Optional[bool] = None
+    recommended_programs: Optional[List[dict]] = None
 
     class Config:
         from_attributes = True

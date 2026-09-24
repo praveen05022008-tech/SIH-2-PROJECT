@@ -37,13 +37,13 @@ export function IndustryProfilePage() {
     api.get('/profiles/industry')
       .then((data) => {
         setProfile({
-          company_name: data.company_name || user?.organization_name || user?.username || 'Cognizant IT Services',
+          company_name: data.company_name || user?.organization_name || user?.full_name || '',
           sector: data.sector || '',
           location: data.location || '',
           description: data.description || '',
           website: data.website || '',
-          contact_person: data.contact_person || (user?.username ? user.username.toUpperCase() : 'CTS'),
-          contact_email: data.contact_email || user?.email || 'smvec@aic.in',
+          contact_person: data.contact_person || user?.full_name || user?.username || '',
+          contact_email: data.contact_email || user?.email || '',
           contact_phone: data.contact_phone || '',
           verification_status: data.verification_status || 'pending',
         });
@@ -51,9 +51,9 @@ export function IndustryProfilePage() {
       .catch(() => {
         setProfile((prev) => ({
           ...prev,
-          company_name: user?.organization_name || user?.username || 'Cognizant IT Services',
-          contact_person: user?.username ? user.username.toUpperCase() : 'CTS',
-          contact_email: user?.email || 'smvec@aic.in'
+          company_name: user?.organization_name || user?.full_name || '',
+          contact_person: user?.full_name || user?.username || '',
+          contact_email: user?.email || ''
         }));
       })
       .finally(() => setLoading(false));

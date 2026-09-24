@@ -561,8 +561,15 @@ export function StudentLearningPage() {
               const isViewingQuiz = selectedModuleIndex === 'quiz';
               const currentModule = !isViewingQuiz ? (parsedModules[selectedModuleIndex] || parsedModules[0]) : null;
               const completedModulesList = activeEnrollment ? JSON.parse(activeEnrollment.completed_modules || '[]') : [];
-              const isCurrentCompleted = currentModule ? completedModulesList.includes(currentModule.id) : false;
-              const allModulesCompleted = parsedModules.length > 0 && parsedModules.every((m) => completedModulesList.includes(m.id));
+              const currentModResult = currentModule ? moduleQuizResult[currentModule.id] : null;
+              const isCurrentCompleted = currentModResult !== null && currentModResult !== undefined
+                ? Boolean(currentModResult.passed)
+                : (currentModule ? (completedModulesList.includes(currentModule.id) || completedModulesList.includes(String(currentModule.id)) || completedModulesList.includes(Number(currentModule.id))) : false);
+              const allModulesCompleted = parsedModules.length > 0 && parsedModules.every((m) => {
+                const mRes = moduleQuizResult[m.id];
+                if (mRes !== undefined && mRes !== null) return Boolean(mRes.passed);
+                return completedModulesList.includes(m.id) || completedModulesList.includes(String(m.id)) || completedModulesList.includes(Number(m.id));
+              });
 
               return (
                 <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
@@ -1044,26 +1051,86 @@ export function StudentLearningPage() {
                                   backgroundColor: moduleQuizResult[currentModule.id].passed ? '#ECFDF5' : '#FEF2F2',
                                   border: `1.5px solid ${moduleQuizResult[currentModule.id].passed ? '#A7F3D0' : '#FECACA'}`,
                                   borderRadius: '12px',
-                                  padding: '14px 18px',
+                                  padding: '16px 20px',
                                   marginBottom: '20px',
                                   display: 'flex',
                                   alignItems: 'center',
                                   justifyContent: 'space-between',
+                                  flexWrap: 'wrap',
+                                  gap: '12px',
                                 }}
                               >
-                                <div>
-                                  <div style={{ fontSize: '13.5px', fontWeight: 800, color: moduleQuizResult[currentModule.id].passed ? '#065F46' : '#991B1B' }}>
-                                    {moduleQuizResult[currentModule.id].passed ? 'Module Test Passed! Next Module Unlocked' : 'Score Below Passing Threshold'}
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                  <div
+                                    style={{
+                                      width: '36px',
+                                      height: '36px',
+                                      borderRadius: '50%',
+                                      backgroundColor: moduleQuizResult[currentModule.id].passed ? '#10B981' : '#EF4444',
+                                      color: '#FFFFFF',
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      justifyContent: 'center',
+                                    }}
+                                  >
+                                    {moduleQuizResult[currentModule.id].passed ? <CheckCircle2 size={20} /> : <AlertCircle size={20} />}
                                   </div>
-                                  <div style={{ fontSize: '12px', color: moduleQuizResult[currentModule.id].passed ? '#047857' : '#B91C1C', marginTop: '2px' }}>
-                                    Your Score: {moduleQuizResult[currentModule.id].score_percent}% &bull; Correct: {moduleQuizResult[currentModule.id].correct_count}/{moduleQuizResult[currentModule.id].total_questions} (Pass Mark: {moduleQuizResult[currentModule.id].passing_threshold}%)
+                                  <div>
+                                    <div style={{ fontSize: '14px', fontWeight: 800, color: moduleQuizResult[currentModule.id].passed ? '#065F46' : '#991B1B' }}>
+                                      {moduleQuizResult[currentModule.id].passed ? 'Module Test Passed! Next Module Unlocked' : 'Score Below Passing Threshold'}
+                                    </div>
+                                    <div style={{ fontSize: '12.5px', color: moduleQuizResult[currentModule.id].passed ? '#047857' : '#B91C1C', marginTop: '2px' }}>
+                                      Your Score: <strong>{moduleQuizResult[currentModule.id].score_percent}%</strong> &bull; Correct: {moduleQuizResult[currentModule.id].correct_count}/{moduleQuizResult[currentModule.id].total_questions} (Pass Mark: {moduleQuizResult[currentModule.id].passing_threshold}%)
+                                    </div>
                                   </div>
                                 </div>
+
+                                {!moduleQuizResult[currentModule.id].passed ? (
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setModuleQuizResult((prev) => {
+                                        const copy = { ...prev };
+                                        delete copy[currentModule.id];
+                                        return copy;
+                                      });
+                                      setModuleQuizAnswers((prev) => {
+                                        const copy = { ...prev };
+                                        delete copy[currentModule.id];
+                                        return copy;
+                                      });
+                                    }}
+                                    className="btn btn-primary btn-sm"
+                                    style={{ backgroundColor: '#DC2626', borderColor: '#DC2626', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+                                  >
+                                    <RotateCcw size={14} /> Retake Test
+                                  </button>
+                                ) : (
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setModuleQuizResult((prev) => {
+                                        const copy = { ...prev };
+                                        delete copy[currentModule.id];
+                                        return copy;
+                                      });
+                                      setModuleQuizAnswers((prev) => {
+                                        const copy = { ...prev };
+                                        delete copy[currentModule.id];
+                                        return copy;
+                                      });
+                                    }}
+                                    className="btn btn-secondary btn-sm"
+                                    style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+                                  >
+                                    <RotateCcw size={13} /> Retake Assessment
+                                  </button>
+                                )}
                               </div>
                             )}
 
                             {/* Module Questions Form */}
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                            <div id={`module_quiz_${currentModule.id}`} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                               {currentModule.quiz.map((q, qIdx) => {
                                 const qidStr = String(q.id || qIdx + 1);
                                 const currentModuleAns = moduleQuizAnswers[currentModule.id] || {};
@@ -1150,21 +1217,44 @@ export function StudentLearningPage() {
                             </div>
 
                             {activeEnrollment && (
-                              <div style={{ marginTop: '16px', display: 'flex', justifyContent: 'flex-end' }}>
-                                <button
-                                  type="button"
-                                  onClick={() => handleSubmitModuleQuiz(currentModule.id, currentModule.quiz)}
-                                  disabled={submittingModuleQuiz}
-                                  className="btn btn-primary btn-sm"
-                                  style={{ padding: '8px 20px', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '6px' }}
-                                >
-                                  <CheckCircle2 size={15} />
-                                  {submittingModuleQuiz
-                                    ? 'Grading Answers...'
-                                    : isCurrentCompleted
-                                    ? 'Retake Module Test'
-                                    : 'Submit Module Test'}
-                                </button>
+                              <div style={{ marginTop: '16px', display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+                                {moduleQuizResult[currentModule.id] && !moduleQuizResult[currentModule.id].passed ? (
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setModuleQuizResult((prev) => {
+                                        const copy = { ...prev };
+                                        delete copy[currentModule.id];
+                                        return copy;
+                                      });
+                                      setModuleQuizAnswers((prev) => {
+                                        const copy = { ...prev };
+                                        delete copy[currentModule.id];
+                                        return copy;
+                                      });
+                                    }}
+                                    className="btn btn-primary btn-sm"
+                                    style={{ backgroundColor: '#DC2626', borderColor: '#DC2626', padding: '9px 24px', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+                                  >
+                                    <RotateCcw size={15} />
+                                    Retake Module Test
+                                  </button>
+                                ) : (
+                                  <button
+                                    type="button"
+                                    onClick={() => handleSubmitModuleQuiz(currentModule.id, currentModule.quiz)}
+                                    disabled={submittingModuleQuiz}
+                                    className="btn btn-primary btn-sm"
+                                    style={{ padding: '9px 24px', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+                                  >
+                                    <CheckCircle2 size={15} />
+                                    {submittingModuleQuiz
+                                      ? 'Grading Answers...'
+                                      : isCurrentCompleted
+                                      ? 'Re-evaluate Test'
+                                      : 'Submit Module Test'}
+                                  </button>
+                                )}
                               </div>
                             )}
                           </div>
@@ -1184,37 +1274,73 @@ export function StudentLearningPage() {
                         </button>
 
                         {selectedModuleIndex < parsedModules.length - 1 ? (
-                          <button
-                            onClick={() => {
-                              if (isCurrentCompleted) {
-                                setSelectedModuleIndex((prev) => prev + 1);
-                              } else {
-                                toast.error(`Please pass the test for Module ${selectedModuleIndex + 1} to proceed.`);
-                              }
-                            }}
-                            disabled={!isCurrentCompleted}
-                            className="btn btn-primary btn-sm"
-                            style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
-                          >
-                            <span>Next Module ({selectedModuleIndex + 2})</span>
-                            <ArrowRight size={14} />
-                          </button>
+                          isCurrentCompleted ? (
+                            <button
+                              onClick={() => setSelectedModuleIndex((prev) => prev + 1)}
+                              className="btn btn-primary btn-sm"
+                              style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+                            >
+                              <span>Next Module ({selectedModuleIndex + 2})</span>
+                              <ArrowRight size={14} />
+                            </button>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setModuleQuizResult((prev) => {
+                                  const copy = { ...prev };
+                                  delete copy[currentModule.id];
+                                  return copy;
+                                });
+                                setModuleQuizAnswers((prev) => {
+                                  const copy = { ...prev };
+                                  delete copy[currentModule.id];
+                                  return copy;
+                                });
+                                const el = document.getElementById(`module_quiz_${currentModule.id}`);
+                                if (el) el.scrollIntoView({ behavior: 'smooth' });
+                              }}
+                              className="btn btn-primary btn-sm"
+                              style={{ backgroundColor: '#DC2626', borderColor: '#DC2626', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+                            >
+                              <RotateCcw size={14} />
+                              <span>Retake Module Test</span>
+                            </button>
+                          )
                         ) : (
-                          <button
-                            onClick={() => {
-                              if (allModulesCompleted) {
-                                setSelectedModuleIndex('quiz');
-                              } else {
-                                toast.error('Please pass all module tests before attempting the final exam.');
-                              }
-                            }}
-                            disabled={!allModulesCompleted}
-                            className="btn btn-primary btn-sm"
-                            style={{ backgroundColor: '#D97706', borderColor: '#D97706', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
-                          >
-                            <Award size={14} />
-                            <span>Proceed to Final Certification Exam</span>
-                          </button>
+                          allModulesCompleted ? (
+                            <button
+                              onClick={() => setSelectedModuleIndex('quiz')}
+                              className="btn btn-primary btn-sm"
+                              style={{ backgroundColor: '#D97706', borderColor: '#D97706', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+                            >
+                              <Award size={14} />
+                              <span>Proceed to Final Certification Exam</span>
+                            </button>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setModuleQuizResult((prev) => {
+                                  const copy = { ...prev };
+                                  delete copy[currentModule.id];
+                                  return copy;
+                                });
+                                setModuleQuizAnswers((prev) => {
+                                  const copy = { ...prev };
+                                  delete copy[currentModule.id];
+                                  return copy;
+                                });
+                                const el = document.getElementById(`module_quiz_${currentModule.id}`);
+                                if (el) el.scrollIntoView({ behavior: 'smooth' });
+                              }}
+                              className="btn btn-primary btn-sm"
+                              style={{ backgroundColor: '#DC2626', borderColor: '#DC2626', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+                            >
+                              <RotateCcw size={14} />
+                              <span>Retake Module Test</span>
+                            </button>
+                          )
                         )}
                       </div>
                     )}

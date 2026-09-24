@@ -812,6 +812,9 @@ def submit_module_quiz(
     if passed:
         completed_set.add(req.module_id)
         enrollment.completed_modules = json.dumps(list(completed_set))
+    else:
+        completed_set = {x for x in completed_set if str(x) != str(req.module_id)}
+        enrollment.completed_modules = json.dumps(list(completed_set))
 
     total_mods_count = max(len(modules), 1)
     all_completed = len(completed_set) >= len(modules)

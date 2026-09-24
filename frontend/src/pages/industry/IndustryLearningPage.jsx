@@ -46,7 +46,7 @@ export function IndustryLearningPage() {
 
   // Form Fields
   const [title, setTitle] = useState('');
-  const [providerName, setProviderName] = useState(user?.organization_name || user?.username || 'Cognizant IT Services');
+  const [providerName, setProviderName] = useState(user?.organization_name || user?.full_name || 'Industry Partner');
   const [programType, setProgramType] = useState('course');
   const [learningMode, setLearningMode] = useState('self_paced');
   const [targetAudience, setTargetAudience] = useState('all');
@@ -90,7 +90,7 @@ export function IndustryLearningPage() {
 
   const sampleTemplate = {
     title: "Enterprise Full-Stack Cloud & React Certification",
-    provider_name: user?.organization_name || user?.username || "Cognizant Technology Solutions",
+    provider_name: user?.organization_name || user?.full_name || "Industry Partner",
     program_type: "course",
     learning_mode: "self_paced",
     target_audience: "student",
@@ -449,7 +449,7 @@ export function IndustryLearningPage() {
       setEditId(null);
       setTitle('');
       setAiTopic('');
-      setProviderName(user?.organization_name || user?.username || 'Cognizant IT Services');
+      setProviderName(user?.organization_name || user?.full_name || 'Industry Partner');
       setProgramType('course');
       setLearningMode('self_paced');
       setTargetAudience('all');

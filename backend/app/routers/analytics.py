@@ -1,4 +1,6 @@
-from fastapi import APIRouter, Depends, HTTPException
+from typing import Optional
+
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
 from app.core.deps import get_current_user, require_role
@@ -27,20 +29,38 @@ def get_admin_dashboard_metrics(current_user: User = Depends(require_role(["admi
 
 @router.get("/institution", response_model=InstitutionAnalyticsResponse)
 def get_institution_dashboard_metrics(
-    current_user: User = Depends(require_role(["institution", "admin"])), db: Session = Depends(get_db)
+    department_id: Optional[int] = Query(None, description="Filter metrics by department ID"),
+    graduation_year: Optional[int] = Query(None, description="Filter metrics by graduation year"),
+    period: Optional[str] = Query("30d", description="Time window: 7d, 30d, 90d, all"),
+    current_user: User = Depends(require_role(["institution", "admin"])),
+    db: Session = Depends(get_db),
 ):
     inst_id = current_user.institution_id
     if not inst_id and current_user.role != "admin":
         raise HTTPException(status_code=400, detail="Institution profile not linked")
     inst_id = inst_id or 1
-    return get_institution_analytics(db=db, institution_id=inst_id)
+    return get_institution_analytics(
+        db=db,
+        institution_id=inst_id,
+        department_id=department_id,
+        graduation_year=graduation_year,
+        period=period,
+    )
 
 
 @router.get("/industry", response_model=IndustryAnalyticsResponse)
 def get_industry_dashboard_metrics(
-    current_user: User = Depends(require_role(["industry", "admin"])), db: Session = Depends(get_db)
+    opportunity_id: Optional[int] = Query(None, description="Filter metrics by specific opportunity ID"),
+    period: Optional[str] = Query("30d", description="Time window: 7d, 30d, 90d, all"),
+    current_user: User = Depends(require_role(["industry", "admin"])),
+    db: Session = Depends(get_db),
 ):
-    return get_industry_analytics(db=db, user_id=current_user.id)
+    return get_industry_analytics(
+        db=db,
+        user_id=current_user.id,
+        opportunity_id=opportunity_id,
+        period=period,
+    )
 
 
 @router.get("/student", response_model=StudentAnalyticsResponse)

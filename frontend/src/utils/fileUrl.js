@@ -1,16 +1,18 @@
 /**
  * Helper to resolve reliable, cross-origin file URLs for viewing/previewing resumes and documents.
  */
+const RAW_API_URL = (import.meta.env.VITE_API_URL || '').replace(/\/+$/, '');
+
 export function getDocumentViewUrl(docOrUrl, docId) {
   if (docId) {
-    return `/api/v1/documents/${docId}/file`;
+    return `${RAW_API_URL}/api/v1/documents/${docId}/file`;
   }
   if (!docOrUrl) return '#';
 
   let targetUrl = '';
   if (typeof docOrUrl === 'object') {
     if (docOrUrl.id) {
-      return `/api/v1/documents/${docOrUrl.id}/file`;
+      return `${RAW_API_URL}/api/v1/documents/${docOrUrl.id}/file`;
     }
     targetUrl = docOrUrl.file_path || docOrUrl.resume_url || '';
   } else if (typeof docOrUrl === 'string') {
@@ -23,13 +25,9 @@ export function getDocumentViewUrl(docOrUrl, docId) {
     return targetUrl;
   }
 
-  if (targetUrl.startsWith('/uploads')) {
-    return targetUrl;
+  if (targetUrl.startsWith('/uploads') || targetUrl.startsWith('/api')) {
+    return `${RAW_API_URL}${targetUrl}`;
   }
 
-  if (targetUrl.startsWith('/api')) {
-    return targetUrl;
-  }
-
-  return `/uploads/${targetUrl.replace(/^\/+/, '')}`;
+  return `${RAW_API_URL}/uploads/${targetUrl.replace(/^\/+/, '')}`;
 }

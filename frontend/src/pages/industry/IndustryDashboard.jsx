@@ -71,7 +71,7 @@ export function IndustryDashboard() {
       .finally(() => setLoading(false));
   }, []);
 
-  const companyDisplayName = metrics.company_name || user?.organization_name || user?.username || 'Cognizant IT Services';
+  const companyDisplayName = metrics.company_name || user?.organization_name || user?.full_name || user?.username || 'Industry Partner';
 
   return (
     <PortalLayout title="Industry Recruitment Dashboard" allowedRoles={['industry']}>
@@ -340,6 +340,25 @@ export function IndustryDashboard() {
                 Live Postings Summary
               </h3>
             </div>
+            <Link
+              to="/industry/analytics"
+              style={{
+                fontSize: '12.5px',
+                fontWeight: 600,
+                color: '#2563EB',
+                textDecoration: 'none',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '4px',
+                padding: '6px 12px',
+                borderRadius: '8px',
+                backgroundColor: '#EFF6FF',
+                border: '1px solid #BFDBFE'
+              }}
+            >
+              <span>View Full Analytics & Intelligence</span>
+              <ArrowRight size={13} />
+            </Link>
           </div>
 
           {loading ? (

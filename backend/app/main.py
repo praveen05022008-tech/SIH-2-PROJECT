@@ -33,18 +33,40 @@ app = FastAPI(
     description="Centralized Platform for Academia–Industry Collaboration for Skill Mapping, Internships and Placement",
 )
 
-# CORS setup
+# CORS setup - supports local development and any deployed Vercel domain
+cors_origins = [
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+]
+if settings.FRONTEND_URL:
+    cors_origins.append(settings.FRONTEND_URL.rstrip("/"))
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
+    allow_origin_regex=r"https://.*\.vercel\.app|http://localhost:\d+|http://127\.0\.0\.1:\d+",
     allow_credentials=True,
-    allow_methods=["*"],
+    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS", "HEAD"],
     allow_headers=["*"],
+    expose_headers=["*"],
+    max_age=86400,
 )
 
-# Serve uploaded documents fallback
-os.makedirs(settings.UPLOAD_DIR, exist_ok=True)
-app.mount("/uploads", StaticFiles(directory=settings.UPLOAD_DIR), name="uploads")
+
+# Explicit OPTIONS preflight handler for cross-origin compliance
+@app.options("/{rest_of_path:path}")
+async def preflight_options_handler(rest_of_path: str):
+    return {}
+
+
+# Serve uploaded documents fallback safely
+try:
+    os.makedirs(settings.UPLOAD_DIR, exist_ok=True)
+    app.mount("/uploads", StaticFiles(directory=settings.UPLOAD_DIR), name="uploads")
+except Exception as e:
+    print(f"Static uploads mount notice: {e}")
 
 # Mount API v1 Routers
 v1 = settings.API_V1_STR
@@ -68,7 +90,10 @@ app.include_router(issues.router, prefix=v1)
 
 @app.on_event("startup")
 def on_startup():
-    init_db()
+    try:
+        init_db()
+    except Exception as e:
+        print(f"Warning during on_startup init_db: {e}")
 
 
 @app.get("/healthz", tags=["System Health"])

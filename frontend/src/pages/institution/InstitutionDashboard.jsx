@@ -22,8 +22,8 @@ export function InstitutionDashboard() {
   const { user } = useAuth();
   const [metrics, setMetrics] = useState({
     institution_name: '',
-    total_students: 4,
-    total_faculty: 2,
+    total_students: 0,
+    total_faculty: 0,
     active_internships: 0,
     total_applications: 0,
     students_placed: 0,
@@ -39,7 +39,7 @@ export function InstitutionDashboard() {
           setMetrics((prev) => ({
             ...prev,
             ...data,
-            institution_name: data.institution_name || user?.organization_name || user?.full_name || 'Sri Manakula Vinayagar Engineering College',
+            institution_name: data.institution_name || user?.organization_name || user?.full_name || 'Academic Institution',
           }));
         }
       })
@@ -47,7 +47,7 @@ export function InstitutionDashboard() {
       .finally(() => setLoading(false));
   }, [user]);
 
-  const institutionName = metrics.institution_name || user?.organization_name || user?.full_name || 'Sri Manakula Vinayagar Engineering College';
+  const institutionName = metrics.institution_name || user?.organization_name || user?.full_name || 'Academic Institution';
 
   return (
     <PortalLayout

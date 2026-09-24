@@ -1,10 +1,28 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../../services/api';
 import { PortalLayout } from '../../components/layout/PortalLayout';
 import { useToast } from '../../context/ToastContext';
 import { LoadingSpinner } from '../../components/common/LoadingSpinner';
-import { Briefcase, MapPin, Building, Clock, CheckCircle2, AlertCircle, Send, Check, ExternalLink } from 'lucide-react';
+import {
+  Briefcase,
+  MapPin,
+  Building2,
+  Clock,
+  CheckCircle2,
+  AlertCircle,
+  Send,
+  Check,
+  ExternalLink,
+  Sparkles,
+  Target,
+  BookOpen,
+  ArrowRight,
+  TrendingUp,
+  Filter,
+  SlidersHorizontal,
+  GraduationCap
+} from 'lucide-react';
 
 export function StudentOpportunitiesPage() {
   const toast = useToast();
@@ -13,6 +31,7 @@ export function StudentOpportunitiesPage() {
   const [typeFilter, setTypeFilter] = useState('');
   const [workModeFilter, setWorkModeFilter] = useState('');
   const [search, setSearch] = useState('');
+  const [matchTab, setMatchTab] = useState('all'); // 'all', 'recommended', 'internships', 'jobs'
 
   // Apply modal
   const [selectedOpp, setSelectedOpp] = useState(null);
@@ -34,7 +53,7 @@ export function StudentOpportunitiesPage() {
     if (search) url += `&search=${encodeURIComponent(search)}`;
 
     api.get(url)
-      .then((data) => setOpportunities(data))
+      .then((data) => setOpportunities(data || []))
       .catch(() => {})
       .finally(() => setLoading(false));
   };
@@ -92,226 +111,587 @@ export function StudentOpportunitiesPage() {
     }
   };
 
+  const filteredOpportunities = useMemo(() => {
+    let list = [...opportunities];
+
+    if (matchTab === 'recommended') {
+      list = list.filter((o) => (o.match_score || 0) >= 70);
+    } else if (matchTab === 'internships') {
+      list = list.filter((o) => o.type === 'internship' || o.type === 'apprenticeship');
+    } else if (matchTab === 'jobs') {
+      list = list.filter((o) => o.type === 'job');
+    }
+
+    // Sort by match score descending
+    return list.sort((a, b) => (b.match_score || 0) - (a.match_score || 0));
+  }, [opportunities, matchTab]);
+
   return (
-    <PortalLayout title="Internships & Placements" allowedRoles={['student']}>
-      {/* Search & Filter Bar */}
-      <div className="card" style={{ marginBottom: '20px' }}>
-        <form onSubmit={handleSearchSubmit} style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', alignItems: 'center' }}>
-          <input
-            type="text"
-            className="form-control"
-            placeholder="Search by title, keywords, or company..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            style={{ flex: 1, minWidth: '220px' }}
-          />
+    <PortalLayout title="Internships & Placement Opportunities" allowedRoles={['student']}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', paddingBottom: '40px' }}>
 
-          <select
-            className="form-control"
-            value={typeFilter}
-            onChange={(e) => setTypeFilter(e.target.value)}
-            style={{ width: '160px' }}
-          >
-            <option value="">All Types</option>
-            <option value="internship">Internship</option>
-            <option value="job">Full-time Job</option>
-            <option value="apprenticeship">Apprenticeship</option>
-            <option value="live_project">Live Project</option>
-          </select>
-
-          <select
-            className="form-control"
-            value={workModeFilter}
-            onChange={(e) => setWorkModeFilter(e.target.value)}
-            style={{ width: '140px' }}
-          >
-            <option value="">All Modes</option>
-            <option value="remote">Remote</option>
-            <option value="on-site">On-Site</option>
-            <option value="hybrid">Hybrid</option>
-          </select>
-
-          <button type="submit" className="btn btn-primary btn-sm" style={{ padding: '8px 16px' }}>
-            Filter Openings
-          </button>
-        </form>
-      </div>
-
-      {/* Opportunities List */}
-      {loading ? (
-        <div className="card" style={{ padding: '30px', display: 'flex', justifyContent: 'center' }}>
-          <LoadingSpinner message="Fetching verified opportunities from database..." />
-        </div>
-      ) : opportunities.length === 0 ? (
-        <div className="card" style={{ textAlign: 'center', padding: '40px' }}>
-          <Briefcase size={36} color="#94A3B8" style={{ margin: '0 auto 12px' }} />
-          <p className="text-muted">No open opportunities found matching your search criteria.</p>
-        </div>
-      ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-          {opportunities.map((opp) => {
-            const isApplied = appliedIds.has(opp.id);
-            return (
-              <div key={opp.id} className="card" style={{ marginBottom: 0 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '12px' }}>
-                  <div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '6px' }}>
-                      <span className="badge badge-neutral" style={{ textTransform: 'uppercase' }}>
-                        {opp.type.replace('_', ' ')}
-                      </span>
-                      <span className="badge badge-info">{opp.work_mode.toUpperCase()}</span>
-                      {opp.match_score !== undefined && opp.match_score !== null && (
-                        <span style={{
-                          backgroundColor: opp.match_score >= 70 ? '#DEF7EC' : opp.match_score >= 40 ? '#FEF08A' : '#FEE2E2',
-                          color: opp.match_score >= 70 ? '#166534' : opp.match_score >= 40 ? '#854D0E' : '#991B1B',
-                          padding: '2px 8px',
-                          borderRadius: '4px',
-                          fontWeight: 700,
-                          fontSize: '11.5px'
-                        }}>
-                          {opp.match_score}% Match
-                        </span>
-                      )}
-                    </div>
-                    <h3 style={{ fontSize: '17px', color: '#1E2A44', marginBottom: '4px' }}>{opp.title}</h3>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '16px', color: '#6B7280', fontSize: '13px' }}>
-                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                        <Building size={14} /> {opp.company_name}
-                      </span>
-                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                        <MapPin size={14} /> {opp.location}
-                      </span>
-                      {opp.stipend_salary && (
-                        <span style={{ fontWeight: 600, color: '#1E2A44' }}>
-                          Stipend/Salary: {opp.stipend_salary}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-
-                  <div>
-                    {isApplied ? (
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <span className="badge badge-success" style={{ padding: '6px 12px', fontSize: '12px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                          <Check size={14} /> Applied
-                        </span>
-                        <Link to="/student/applications" className="btn btn-outline btn-sm" style={{ padding: '4px 10px', fontSize: '12px' }}>
-                          Track Status
-                        </Link>
-                      </div>
-                    ) : (
-                      <button
-                        onClick={() => handleOpenApplyModal(opp)}
-                        className="btn btn-secondary btn-sm"
-                        style={{ padding: '6px 16px' }}
-                      >
-                        Apply Now
-                      </button>
-                    )}
-                  </div>
-                </div>
-
-                <p style={{ color: '#4B5563', fontSize: '13px', margin: '14px 0 10px', lineHeight: '1.6' }}>
-                  {opp.description}
-                </p>
-
-                {/* Skills Tags */}
-                {opp.skills && opp.skills.length > 0 && (
-                  <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginTop: '10px' }}>
-                    {opp.skills.map((sk) => (
-                      <span key={sk.id} style={{
-                        backgroundColor: '#F1F5F9',
-                        color: '#334155',
-                        fontSize: '11.5px',
-                        padding: '2px 8px',
-                        borderRadius: '3px',
-                        border: '1px solid #E2E8F0'
-                      }}>
-                        {sk.skill_name} ({sk.minimum_level})
-                      </span>
-                    ))}
-                  </div>
-                )}
-
-                {/* Explainable Match Transparency */}
-                {opp.match_reasons && opp.match_reasons.length > 0 && (
-                  <div style={{ marginTop: '12px', padding: '10px', backgroundColor: '#F8FAFC', borderRadius: '4px', border: '1px dashed #CBD5E1', fontSize: '12px' }}>
-                    <div style={{ fontWeight: 600, color: '#1E2A44', marginBottom: '4px' }}>Candidate Match Assessment:</div>
-                    <ul style={{ paddingLeft: '18px', color: '#475569' }}>
-                      {opp.match_reasons.map((r, idx) => (
-                        <li key={idx}>{r}</li>
-                      ))}
-                    </ul>
-                    {opp.missing_skills && opp.missing_skills.length > 0 && (
-                      <div style={{ marginTop: '4px', color: '#B91C1C' }}>
-                        Missing Requirements: {opp.missing_skills.join(', ')}
-                      </div>
-                    )}
-                  </div>
-                )}
+        {/* Top Header & AI Matching Hero Banner */}
+        <div
+          style={{
+            background: 'linear-gradient(135deg, #0F172A 0%, #1E293B 100%)',
+            borderRadius: '16px',
+            padding: '24px 28px',
+            color: '#FFFFFF',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '18px',
+            boxShadow: '0 10px 25px -5px rgba(15, 23, 42, 0.25)'
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
+                <span
+                  style={{
+                    backgroundColor: 'rgba(59, 130, 246, 0.2)',
+                    border: '1px solid rgba(96, 165, 250, 0.4)',
+                    color: '#93C5FD',
+                    fontSize: '11px',
+                    fontWeight: 700,
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.6px',
+                    padding: '3px 10px',
+                    borderRadius: '20px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '5px'
+                  }}
+                >
+                  <Sparkles size={12} /> Automated AI Match Engine
+                </span>
               </div>
-            );
-          })}
-        </div>
-      )}
-
-      {/* Apply Modal */}
-      {selectedOpp && (
-        <div className="modal-overlay">
-          <div className="modal-content">
-            <div className="card-header" style={{ marginBottom: '14px' }}>
-              <div>
-                <h3 className="card-title">Apply for {selectedOpp.title}</h3>
-                <p className="text-muted" style={{ fontSize: '12.5px' }}>{selectedOpp.company_name} • {selectedOpp.location}</p>
-              </div>
-              <button onClick={() => setSelectedOpp(null)} className="btn btn-outline btn-sm">Close</button>
+              <h1 style={{ fontSize: '22px', fontWeight: 800, margin: 0, color: '#F8FAFC' }}>
+                Verified Internships & Career Opportunities
+              </h1>
+              <p style={{ margin: '4px 0 0 0', fontSize: '13px', color: '#CBD5E1' }}>
+                Opportunities are continuously scored against your verified assessment results, academic CGPA, and portfolio skills.
+              </p>
             </div>
+          </div>
 
-            {applyMsg.text && (
-              <div style={{
+          {/* Tab Filters */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', borderTop: '1px solid rgba(255, 255, 255, 0.1)', paddingTop: '16px' }}>
+            {[
+              { id: 'all', label: 'All Open Roles' },
+              { id: 'recommended', label: 'AI Best Matches (70%+ Fit)' },
+              { id: 'internships', label: 'Internships & Projects' },
+              { id: 'jobs', label: 'Full-Time Positions' }
+            ].map((tab) => {
+              const active = matchTab === tab.id;
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => setMatchTab(tab.id)}
+                  style={{
+                    padding: '7px 15px',
+                    borderRadius: '8px',
+                    fontSize: '12.5px',
+                    fontWeight: active ? 700 : 500,
+                    backgroundColor: active ? '#2563EB' : 'rgba(255, 255, 255, 0.06)',
+                    color: active ? '#FFFFFF' : '#CBD5E1',
+                    border: active ? '1px solid #60A5FA' : '1px solid rgba(255, 255, 255, 0.1)',
+                    cursor: 'pointer',
+                    transition: 'all 0.15s ease'
+                  }}
+                >
+                  {tab.label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Search & Attribute Filters */}
+        <div
+          style={{
+            backgroundColor: '#FFFFFF',
+            borderRadius: '14px',
+            padding: '16px 20px',
+            border: '1px solid #E2E8F0',
+            boxShadow: '0 1px 3px rgba(0,0,0,0.05)'
+          }}
+        >
+          <form onSubmit={handleSearchSubmit} style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', alignItems: 'center' }}>
+            <input
+              type="text"
+              placeholder="Search roles by title, skill keywords, or company..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              style={{
+                flex: 1,
+                minWidth: '220px',
+                padding: '9px 14px',
+                borderRadius: '8px',
+                border: '1px solid #CBD5E1',
+                fontSize: '13px',
+                outline: 'none'
+              }}
+            />
+
+            <select
+              value={typeFilter}
+              onChange={(e) => setTypeFilter(e.target.value)}
+              style={{
+                width: '150px',
+                padding: '9px 12px',
+                borderRadius: '8px',
+                border: '1px solid #CBD5E1',
+                fontSize: '13px',
+                outline: 'none',
+                backgroundColor: '#FFFFFF'
+              }}
+            >
+              <option value="">All Types</option>
+              <option value="internship">Internship</option>
+              <option value="job">Full-time Job</option>
+              <option value="apprenticeship">Apprenticeship</option>
+              <option value="live_project">Live Project</option>
+            </select>
+
+            <select
+              value={workModeFilter}
+              onChange={(e) => setWorkModeFilter(e.target.value)}
+              style={{
+                width: '140px',
+                padding: '9px 12px',
+                borderRadius: '8px',
+                border: '1px solid #CBD5E1',
+                fontSize: '13px',
+                outline: 'none',
+                backgroundColor: '#FFFFFF'
+              }}
+            >
+              <option value="">All Modes</option>
+              <option value="remote">Remote</option>
+              <option value="on-site">On-Site</option>
+              <option value="hybrid">Hybrid</option>
+            </select>
+
+            <button
+              type="submit"
+              style={{
+                padding: '9px 18px',
+                borderRadius: '8px',
+                backgroundColor: '#2563EB',
+                color: '#FFFFFF',
+                fontWeight: 600,
+                fontSize: '13px',
+                border: 'none',
+                cursor: 'pointer'
+              }}
+            >
+              Apply Filter
+            </button>
+          </form>
+        </div>
+
+        {/* Opportunities List */}
+        {loading ? (
+          <div style={{ padding: '60px 0', display: 'flex', justifyContent: 'center' }}>
+            <LoadingSpinner message="Evaluating role matches against your profile credentials..." />
+          </div>
+        ) : filteredOpportunities.length === 0 ? (
+          <div
+            style={{
+              backgroundColor: '#FFFFFF',
+              borderRadius: '16px',
+              textAlign: 'center',
+              padding: '48px 20px',
+              border: '1px solid #E2E8F0'
+            }}
+          >
+            <Briefcase size={40} color="#94A3B8" style={{ margin: '0 auto 12px' }} />
+            <h3 style={{ fontSize: '16px', fontWeight: 700, color: '#1E293B', margin: '0 0 6px 0' }}>
+              No matching opportunities found
+            </h3>
+            <p style={{ fontSize: '13px', color: '#64748B', margin: 0 }}>
+              Try adjusting your filter parameters or search terms to explore more industry postings.
+            </p>
+          </div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            {filteredOpportunities.map((opp) => {
+              const isApplied = appliedIds.has(opp.id);
+              const matchScore = opp.match_score !== undefined && opp.match_score !== null ? opp.match_score : 75.0;
+
+              let fitLabel = 'Developing Fit';
+              let fitBg = '#FEF2F2';
+              let fitColor = '#DC2626';
+
+              if (matchScore >= 75) {
+                fitLabel = 'High Fit';
+                fitBg = '#ECFDF5';
+                fitColor = '#059669';
+              } else if (matchScore >= 50) {
+                fitLabel = 'Moderate Fit';
+                fitBg = '#FFFBEB';
+                fitColor = '#D97706';
+              }
+
+              return (
+                <div
+                  key={opp.id}
+                  style={{
+                    backgroundColor: '#FFFFFF',
+                    borderRadius: '16px',
+                    padding: '24px',
+                    border: '1px solid #E2E8F0',
+                    boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '16px'
+                  }}
+                >
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '16px' }}>
+                    <div style={{ flex: 1, minWidth: '280px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px', flexWrap: 'wrap' }}>
+                        <span
+                          style={{
+                            fontSize: '11px',
+                            fontWeight: 700,
+                            textTransform: 'uppercase',
+                            backgroundColor: '#F1F5F9',
+                            color: '#475569',
+                            padding: '3px 8px',
+                            borderRadius: '4px'
+                          }}
+                        >
+                          {opp.type.replace('_', ' ')}
+                        </span>
+                        <span
+                          style={{
+                            fontSize: '11px',
+                            fontWeight: 700,
+                            textTransform: 'uppercase',
+                            backgroundColor: '#EFF6FF',
+                            color: '#2563EB',
+                            padding: '3px 8px',
+                            borderRadius: '4px'
+                          }}
+                        >
+                          {opp.work_mode}
+                        </span>
+
+                        {/* Fit Badge */}
+                        <span
+                          style={{
+                            fontSize: '11.5px',
+                            fontWeight: 700,
+                            backgroundColor: fitBg,
+                            color: fitColor,
+                            padding: '3px 10px',
+                            borderRadius: '6px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '4px'
+                          }}
+                        >
+                          <Target size={13} /> {matchScore}% Match • {fitLabel}
+                        </span>
+                      </div>
+
+                      <h2 style={{ fontSize: '18px', fontWeight: 800, color: '#0F172A', margin: '0 0 6px 0' }}>
+                        {opp.title}
+                      </h2>
+
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '16px', color: '#64748B', fontSize: '13px', flexWrap: 'wrap' }}>
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', fontWeight: 600, color: '#334155' }}>
+                          <Building2 size={14} color="#2563EB" /> {opp.company_name}
+                        </span>
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
+                          <MapPin size={14} /> {opp.location}
+                        </span>
+                        {opp.stipend_salary && (
+                          <span style={{ fontWeight: 700, color: '#059669' }}>
+                            Stipend/Package: {opp.stipend_salary}
+                          </span>
+                        )}
+                        {opp.duration && (
+                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
+                            <Clock size={14} /> Duration: {opp.duration}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    <div>
+                      {isApplied ? (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                          <span
+                            style={{
+                              backgroundColor: '#ECFDF5',
+                              color: '#059669',
+                              padding: '8px 14px',
+                              borderRadius: '8px',
+                              fontSize: '13px',
+                              fontWeight: 700,
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '6px'
+                            }}
+                          >
+                            <Check size={15} /> Application Submitted
+                          </span>
+                          <Link
+                            to="/student/applications"
+                            style={{
+                              fontSize: '12.5px',
+                              fontWeight: 600,
+                              color: '#2563EB',
+                              textDecoration: 'none',
+                              padding: '7px 12px',
+                              border: '1px solid #BFDBFE',
+                              borderRadius: '8px'
+                            }}
+                          >
+                            Track Status
+                          </Link>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => handleOpenApplyModal(opp)}
+                          style={{
+                            backgroundColor: '#2563EB',
+                            color: '#FFFFFF',
+                            padding: '9px 20px',
+                            borderRadius: '10px',
+                            fontSize: '13.5px',
+                            fontWeight: 700,
+                            border: 'none',
+                            cursor: 'pointer',
+                            boxShadow: '0 4px 12px rgba(37, 99, 235, 0.3)',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '6px'
+                          }}
+                        >
+                          <Send size={14} /> Apply Now
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  <p style={{ color: '#475569', fontSize: '13.5px', margin: 0, lineHeight: 1.6 }}>
+                    {opp.description}
+                  </p>
+
+                  {/* Skills Required Tags */}
+                  {opp.skills && opp.skills.length > 0 && (
+                    <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                      {opp.skills.map((sk) => (
+                        <span
+                          key={sk.id}
+                          style={{
+                            backgroundColor: '#F8FAFC',
+                            color: '#334155',
+                            fontSize: '12px',
+                            fontWeight: 600,
+                            padding: '4px 10px',
+                            borderRadius: '6px',
+                            border: '1px solid #E2E8F0'
+                          }}
+                        >
+                          {sk.skill_name} ({sk.minimum_level})
+                        </span>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Explainable AI Match Assessment Breakdown */}
+                  {opp.match_reasons && opp.match_reasons.length > 0 && (
+                    <div
+                      style={{
+                        backgroundColor: '#F8FAFC',
+                        borderRadius: '10px',
+                        padding: '14px 16px',
+                        border: '1px solid #E2E8F0',
+                        fontSize: '12.5px'
+                      }}
+                    >
+                      <div style={{ fontWeight: 700, color: '#1E293B', marginBottom: '6px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <Target size={14} color="#2563EB" /> Candidate Match Assessment:
+                      </div>
+                      <ul style={{ margin: 0, paddingLeft: '20px', color: '#475569', display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                        {opp.match_reasons.map((r, idx) => (
+                          <li key={idx}>{r}</li>
+                        ))}
+                      </ul>
+
+                      {opp.missing_skills && opp.missing_skills.length > 0 && (
+                        <div style={{ marginTop: '8px', color: '#DC2626', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <AlertCircle size={14} /> Missing Competencies: {opp.missing_skills.join(', ')}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Bridge Course Pathway Recommendation */}
+                  {opp.recommended_programs && opp.recommended_programs.length > 0 && (
+                    <div
+                      style={{
+                        backgroundColor: '#EFF6FF',
+                        border: '1px solid #BFDBFE',
+                        borderRadius: '10px',
+                        padding: '14px 16px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        flexWrap: 'wrap',
+                        gap: '12px'
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <div style={{ width: 32, height: 32, borderRadius: '8px', backgroundColor: '#2563EB', color: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                          <BookOpen size={16} />
+                        </div>
+                        <div>
+                          <div style={{ fontSize: '13px', fontWeight: 700, color: '#1E40AF' }}>
+                            Recommended Skill Bridge Pathway
+                          </div>
+                          <div style={{ fontSize: '12px', color: '#3B82F6' }}>
+                            {opp.recommended_programs[0].title} ({opp.recommended_programs[0].provider})
+                          </div>
+                        </div>
+                      </div>
+
+                      <Link
+                        to="/student/learning-programs"
+                        style={{
+                          fontSize: '12.5px',
+                          fontWeight: 700,
+                          color: '#FFFFFF',
+                          backgroundColor: '#2563EB',
+                          padding: '6px 14px',
+                          borderRadius: '8px',
+                          textDecoration: 'none',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '5px'
+                        }}
+                      >
+                        <span>Start Bridge Course</span>
+                        <ArrowRight size={13} />
+                      </Link>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {/* Apply Modal */}
+        {selectedOpp && (
+          <div
+            style={{
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              backgroundColor: 'rgba(0, 0, 0, 0.6)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              zIndex: 100,
+              padding: '16px'
+            }}
+          >
+            <div
+              style={{
+                backgroundColor: '#FFFFFF',
+                borderRadius: '16px',
+                padding: '28px',
+                maxWidth: '540px',
+                width: '100%',
+                boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.2)',
                 display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-                backgroundColor: applyMsg.type === 'success' ? '#DEF7EC' : '#FEE2E2',
-                border: `1px solid ${applyMsg.type === 'success' ? '#86EFAC' : '#FCA5A5'}`,
-                borderRadius: '4px',
-                padding: '8px 12px',
-                color: applyMsg.type === 'success' ? '#166534' : '#991B1B',
-                fontSize: '12.5px',
-                marginBottom: '14px'
-              }}>
-                {applyMsg.type === 'success' ? <CheckCircle2 size={16} /> : <AlertCircle size={16} />}
-                <span>{applyMsg.text}</span>
+                flexDirection: 'column',
+                gap: '16px'
+              }}
+            >
+              <div>
+                <h3 style={{ fontSize: '18px', fontWeight: 800, color: '#0F172A', margin: '0 0 4px 0' }}>
+                  Apply for {selectedOpp.title}
+                </h3>
+                <p style={{ fontSize: '13px', color: '#64748B', margin: 0 }}>
+                  {selectedOpp.company_name} • {selectedOpp.location}
+                </p>
               </div>
-            )}
 
-            <form onSubmit={handleApplySubmit}>
-              <div className="form-group">
-                <label className="form-label">Cover Note / Expression of Interest</label>
+              {applyMsg.text && (
+                <div style={{ padding: '10px 14px', borderRadius: '8px', fontSize: '12.5px', backgroundColor: applyMsg.type === 'error' ? '#FEF2F2' : '#EFF6FF', color: applyMsg.type === 'error' ? '#DC2626' : '#2563EB' }}>
+                  {applyMsg.text}
+                </div>
+              )}
+
+              <div>
+                <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>
+                  Cover Note / Statement of Interest (Optional)
+                </label>
                 <textarea
-                  className="form-control"
                   rows={4}
-                  placeholder="Introduce yourself, explain your interest in this opening and summarize your relevant competencies..."
                   value={coverNote}
                   onChange={(e) => setCoverNote(e.target.value)}
-                  required
+                  placeholder="Introduce yourself, highlight relevant projects and why you are a strong match for this role..."
+                  style={{
+                    width: '100%',
+                    padding: '10px 12px',
+                    borderRadius: '8px',
+                    border: '1px solid #CBD5E1',
+                    fontSize: '13px',
+                    outline: 'none',
+                    boxSizing: 'border-box'
+                  }}
                 />
               </div>
 
-              <div style={{ fontSize: '12px', color: '#64748B', marginBottom: '16px', lineHeight: '1.5' }}>
-                Your registered student profile, verified skill assessments, and uploaded resume will be attached to this application.
-              </div>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '8px' }}>
+                <button
+                  type="button"
+                  onClick={() => setSelectedOpp(null)}
+                  disabled={applying}
+                  style={{
+                    padding: '9px 16px',
+                    borderRadius: '8px',
+                    backgroundColor: '#F1F5F9',
+                    color: '#475569',
+                    fontWeight: 600,
+                    fontSize: '13px',
+                    border: 'none',
+                    cursor: 'pointer'
+                  }}
+                >
+                  Cancel
+                </button>
 
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
-                <button type="button" onClick={() => setSelectedOpp(null)} className="btn btn-outline btn-sm">Cancel</button>
-                <button type="submit" className="btn btn-primary btn-sm" disabled={applying}>
-                  <Send size={13} /> {applying ? 'Submitting...' : 'Confirm Application'}
+                <button
+                  type="button"
+                  onClick={handleApplySubmit}
+                  disabled={applying}
+                  style={{
+                    padding: '9px 20px',
+                    borderRadius: '8px',
+                    backgroundColor: '#2563EB',
+                    color: '#FFFFFF',
+                    fontWeight: 700,
+                    fontSize: '13px',
+                    border: 'none',
+                    cursor: applying ? 'not-allowed' : 'pointer'
+                  }}
+                >
+                  {applying ? 'Submitting Application...' : 'Confirm & Submit Application'}
                 </button>
               </div>
-            </form>
+            </div>
           </div>
-        </div>
-      )}
+        )}
+      </div>
     </PortalLayout>
   );
 }

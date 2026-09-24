@@ -21,6 +21,7 @@ import {
   ShieldCheck,
   TrendingUp,
   AlertCircle,
+  BarChart3,
   X,
   ChevronLeft,
   ChevronRight
@@ -105,9 +106,11 @@ export function Sidebar({ isOpen = false, onClose }) {
       case 'industry':
         return [
           { to: '/industry/dashboard', label: 'Industry Dashboard', icon: LayoutDashboard },
-          { to: '/industry/profile', label: 'Company Profile', icon: Building2 },
-          { to: '/industry/post-opportunity', label: 'Post Opportunity', icon: Briefcase },
+          { to: '/industry/opportunities', label: 'Manage Postings', icon: Briefcase },
+          { to: '/industry/post-opportunity', label: 'Post Opportunity', icon: Plus },
           { to: '/industry/applications', label: 'Applicant Pipeline', icon: Users },
+          { to: '/industry/analytics', label: 'Analytics & Reports', icon: BarChart3 },
+          { to: '/industry/profile', label: 'Company Profile', icon: Building2 },
           { to: '/industry/mentorship', label: 'Internship Tracking', icon: GraduationCap },
           { to: '/industry/learning-programs', label: 'Academy & Training', icon: BookOpen },
           { to: '/industry/collaborations', label: 'Institutional Collab', icon: FolderGit2 },
@@ -115,11 +118,11 @@ export function Sidebar({ isOpen = false, onClose }) {
       case 'institution':
         return [
           { to: '/institution/dashboard', label: 'Institution Dashboard', icon: LayoutDashboard },
+          { to: '/institution/placements', label: 'Placements & Analytics', icon: BarChart3 },
           { to: '/institution/profile', label: 'Institution Profile', icon: Building2 },
           { to: '/institution/departments', label: 'Departments', icon: FolderGit2 },
           { to: '/institution/students', label: 'Student Directory', icon: GraduationCap },
           { to: '/institution/faculty', label: 'Faculty Directory', icon: Users },
-          { to: '/institution/placements', label: 'Placements & Internships', icon: Briefcase },
           { to: '/institution/document-verification', label: 'Document Verification', icon: ShieldCheck },
           { to: '/institution/collaborations', label: 'Industry Collaborations', icon: FileCheck },
         ];

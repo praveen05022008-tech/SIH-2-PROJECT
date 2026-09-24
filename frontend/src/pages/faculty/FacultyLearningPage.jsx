@@ -706,7 +706,15 @@ export function FacultyLearningPage() {
               const isViewingQuiz = selectedModuleIndex === 'quiz';
               const currentModule = !isViewingQuiz ? (parsedModules[selectedModuleIndex] || parsedModules[0]) : null;
               const completedModulesList = activeEnrollment ? JSON.parse(activeEnrollment.completed_modules || '[]') : [];
-              const isCurrentCompleted = currentModule ? completedModulesList.includes(currentModule.id) : false;
+              const currentModResult = currentModule ? moduleQuizResult[currentModule.id] : null;
+              const isCurrentCompleted = currentModResult !== null && currentModResult !== undefined
+                ? Boolean(currentModResult.passed)
+                : (currentModule ? (completedModulesList.includes(currentModule.id) || completedModulesList.includes(String(currentModule.id)) || completedModulesList.includes(Number(currentModule.id))) : false);
+              const allModulesCompleted = parsedModules.length > 0 && parsedModules.every((m) => {
+                const mRes = moduleQuizResult[m.id];
+                if (mRes !== undefined && mRes !== null) return Boolean(mRes.passed);
+                return completedModulesList.includes(m.id) || completedModulesList.includes(String(m.id)) || completedModulesList.includes(Number(m.id));
+              });
 
               return (
                 <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
@@ -1114,21 +1122,68 @@ export function FacultyLearningPage() {
                               </button>
 
                               {selectedModuleIndex < parsedModules.length - 1 ? (
-                                <button
-                                  onClick={() => setSelectedModuleIndex((prev) => prev + 1)}
-                                  className="btn btn-primary btn-sm"
-                                  style={{ backgroundColor: '#4338CA', borderColor: '#4338CA' }}
-                                >
-                                  Next Module
-                                </button>
+                                isCurrentCompleted ? (
+                                  <button
+                                    onClick={() => setSelectedModuleIndex((prev) => prev + 1)}
+                                    className="btn btn-primary btn-sm"
+                                    style={{ backgroundColor: '#4338CA', borderColor: '#4338CA', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+                                  >
+                                    <span>Next Module ({selectedModuleIndex + 2})</span>
+                                    <ArrowRight size={14} />
+                                  </button>
+                                ) : (
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setModuleQuizResult((prev) => {
+                                        const copy = { ...prev };
+                                        delete copy[currentModule.id];
+                                        return copy;
+                                      });
+                                      setModuleQuizAnswers((prev) => {
+                                        const copy = { ...prev };
+                                        delete copy[currentModule.id];
+                                        return copy;
+                                      });
+                                    }}
+                                    className="btn btn-primary btn-sm"
+                                    style={{ backgroundColor: '#DC2626', borderColor: '#DC2626', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+                                  >
+                                    <RotateCcw size={14} />
+                                    <span>Retake Module Test</span>
+                                  </button>
+                                )
                               ) : (
-                                <button
-                                  onClick={() => setSelectedModuleIndex('quiz')}
-                                  className="btn btn-primary btn-sm"
-                                  style={{ backgroundColor: '#D97706', borderColor: '#D97706', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
-                                >
-                                  <Award size={14} /> Proceed to Final Exam
-                                </button>
+                                allModulesCompleted ? (
+                                  <button
+                                    onClick={() => setSelectedModuleIndex('quiz')}
+                                    className="btn btn-primary btn-sm"
+                                    style={{ backgroundColor: '#D97706', borderColor: '#D97706', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                                  >
+                                    <Award size={14} /> Proceed to Final Exam
+                                  </button>
+                                ) : (
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setModuleQuizResult((prev) => {
+                                        const copy = { ...prev };
+                                        delete copy[currentModule.id];
+                                        return copy;
+                                      });
+                                      setModuleQuizAnswers((prev) => {
+                                        const copy = { ...prev };
+                                        delete copy[currentModule.id];
+                                        return copy;
+                                      });
+                                    }}
+                                    className="btn btn-primary btn-sm"
+                                    style={{ backgroundColor: '#DC2626', borderColor: '#DC2626', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+                                  >
+                                    <RotateCcw size={14} />
+                                    <span>Retake Module Test</span>
+                                  </button>
+                                )
                               )}
                             </div>
                           </div>

@@ -4,7 +4,7 @@ import { api } from '../../services/api';
 import { PortalLayout } from '../../components/layout/PortalLayout';
 import { useToast } from '../../context/ToastContext';
 import { getDocumentViewUrl } from '../../utils/fileUrl';
-import { Users, FileText, CheckCircle, Sparkles, Loader2 } from 'lucide-react';
+import { Users, FileText, CheckCircle, Sparkles, Loader2, FolderGit2, ExternalLink } from 'lucide-react';
 import { LoadingSpinner } from '../../components/common/LoadingSpinner';
 
 export function IndustryApplicationsPage() {
@@ -265,9 +265,21 @@ export function IndustryApplicationsPage() {
                       </td>
                       <td>{new Date(a.applied_at).toLocaleDateString()}</td>
                       <td>
-                        <button onClick={() => handleOpenReview(a)} className="btn btn-outline btn-sm">
-                          Evaluate
-                        </button>
+                        <div style={{ display: 'flex', gap: '6px' }}>
+                          <button onClick={() => handleOpenReview(a)} className="btn btn-outline btn-sm">
+                            Evaluate
+                          </button>
+                          <a
+                            href={`/portfolio/${a.applicant?.username || a.applicant_user_id}`}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="btn btn-sm"
+                            style={{ padding: '4px 8px', fontSize: '11.5px', color: '#2563EB', backgroundColor: '#EFF6FF', border: '1px solid #BFDBFE', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                            title="View Complete Student Digital Portfolio"
+                          >
+                            <FolderGit2 size={12} /> Portfolio
+                          </a>
+                        </div>
                       </td>
                     </tr>
                   );
@@ -322,6 +334,15 @@ export function IndustryApplicationsPage() {
                 "{selectedApp.cover_note || 'No statement submitted.'}"
               </p>
               <div style={{ display: 'flex', gap: '10px', marginTop: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
+                <a
+                  href={`/portfolio/${selectedApp.applicant?.username || selectedApp.applicant_user_id}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="btn btn-sm"
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', backgroundColor: '#EFF6FF', border: '1px solid #2563EB', color: '#2563EB', fontWeight: 700 }}
+                >
+                  <FolderGit2 size={13} /> View Digital Portfolio
+                </a>
                 {selectedApp.resume_url && (
                   <a href={getDocumentViewUrl(selectedApp.resume_url)} target="_blank" rel="noreferrer" className="btn btn-outline btn-sm">
                     <FileText size={13} /> {selectedApp.applicant_role === 'faculty' ? 'View Faculty CV' : 'View Candidate Resume'}

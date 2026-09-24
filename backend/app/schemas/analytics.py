@@ -24,8 +24,17 @@ class InstitutionAnalyticsResponse(BaseModel):
     total_applications: int
     students_placed: int
     collaboration_count: int
+    placement_rate: float = 0.0
+    average_readiness_score: float = 0.0
+    total_eligible_students: int = 0
+    readiness_distribution: List[Dict[str, Any]] = []
     department_breakdown: List[Dict[str, Any]] = []
+    department_metrics: List[Dict[str, Any]] = []
+    top_hiring_companies: List[Dict[str, Any]] = []
     top_skills: List[Dict[str, Any]] = []
+    in_demand_skills: List[Dict[str, Any]] = []
+    placements_timeline: List[Dict[str, Any]] = []
+    placement_records: List[Dict[str, Any]] = []
 
 
 class IndustryAnalyticsResponse(BaseModel):
@@ -35,6 +44,14 @@ class IndustryAnalyticsResponse(BaseModel):
     shortlisted_candidates: int
     selected_candidates: int
     active_interns: int
+    placement_rate: float = 0.0
+    average_time_to_hire_days: float = 0.0
+    average_match_score: float = 0.0
+    recruitment_funnel: List[Dict[str, Any]] = []
+    pipeline_distribution: List[Dict[str, Any]] = []
+    skill_demand_trends: List[Dict[str, Any]] = []
+    institution_sourcing: List[Dict[str, Any]] = []
+    applications_time_trend: List[Dict[str, Any]] = []
     opportunities_breakdown: List[Dict[str, Any]] = []
 
 

@@ -1,3 +1,9 @@
+[project]
+name = "aic-portal-backend"
+version = "1.0.0"
+description = "Academia-Industry Collaboration Portal Backend"
+requires-python = ">=3.10"
+
 [tool.black]
 line-length = 120
 target-version = ['py311']

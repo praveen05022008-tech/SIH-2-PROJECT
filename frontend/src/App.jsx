@@ -39,7 +39,9 @@ import { FacultyLearningPage } from './pages/faculty/FacultyLearningPage';
 
 // Industry Pages
 import { IndustryDashboard } from './pages/industry/IndustryDashboard';
+import { IndustryAnalyticsPage } from './pages/industry/IndustryAnalyticsPage';
 import { IndustryProfilePage } from './pages/industry/IndustryProfilePage';
+import { IndustryOpportunitiesPage } from './pages/industry/IndustryOpportunitiesPage';
 import { PostOpportunityPage } from './pages/industry/PostOpportunityPage';
 import { IndustryApplicationsPage } from './pages/industry/IndustryApplicationsPage';
 import { IndustryMentorshipPage } from './pages/industry/IndustryMentorshipPage';
@@ -105,7 +107,9 @@ export default function App() {
 
           {/* Role 3: Industry Routes */}
           <Route path="/industry/dashboard" element={<IndustryDashboard />} />
+          <Route path="/industry/analytics" element={<IndustryAnalyticsPage />} />
           <Route path="/industry/profile" element={<IndustryProfilePage />} />
+          <Route path="/industry/opportunities" element={<IndustryOpportunitiesPage />} />
           <Route path="/industry/post-opportunity" element={<PostOpportunityPage />} />
           <Route path="/industry/applications" element={<IndustryApplicationsPage />} />
           <Route path="/industry/mentorship" element={<IndustryMentorshipPage />} />
