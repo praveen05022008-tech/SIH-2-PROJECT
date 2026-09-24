@@ -626,7 +626,8 @@ def generate_learning_syllabus(
     skill_level: str = "Intermediate",
 ) -> Dict[str, Any]:
     """
-    Generates an industry-ready curriculum, learning objectives, and module list
+    Generates an industry-ready curriculum, learning objectives, module list,
+    and a comprehensive final certification examination questionnaire (MCQs)
     for training programs, certifications, workshops, and bootcamps.
     """
     system_prompt = (
@@ -637,7 +638,9 @@ def generate_learning_syllabus(
         "'skills_covered' (comma-separated key technical skills), "
         "'duration' (e.g., '4 Weeks', '20 Hours'), "
         "'eligibility' (prerequisites string), "
-        "'modules' (array of 4-6 objects with 'id' (int 1-N), 'title' (module title), 'duration' (e.g. '1.5 Hours'), 'description' (summary), 'topics' (array of strings), 'reading_time' (string), 'video_url' (empty string or sample url))."
+        "'passing_score' (int 60 or 70), "
+        "'modules' (array of 4-5 objects with 'id' (int 1-N), 'title' (module title), 'duration' (e.g. '1.5 Hours'), 'description' (summary), 'topics' (array of strings), 'reading_time' (string), 'video_url' (empty string or sample url)), "
+        "'quiz' (array of 5 practical multiple-choice certification exam questions with 'id' (int 1-5), 'question' (string), 'options' (array of 4 distinct plausible strings), 'correct_answer' (int index 0-3), 'explanation' (string explaining why correct))."
     )
 
     user_prompt = f"""
@@ -646,7 +649,7 @@ def generate_learning_syllabus(
     Target Duration: {duration}
     Target Skill Level: {skill_level}
 
-    Create an engaging, practical, hands-on curriculum tailored for college students preparing for industry hiring.
+    Create an engaging, practical, hands-on curriculum and 5 rigorous certification exam questions tailored for college students preparing for industry hiring.
     """
 
     raw = _call_ai(
@@ -695,6 +698,69 @@ def generate_learning_syllabus(
         },
     ]
 
+    fallback_quiz = [
+        {
+            "id": 1,
+            "question": f"In enterprise {clean_topic} architecture, which practice is critical for ensuring reliable scalability?",
+            "options": [
+                "Decoupling modular service layers with clear interface contracts",
+                "Coupling database queries tightly within presentation components",
+                "Hardcoding configuration parameters directly in application files",
+                "Disabling structured error boundaries to reduce overhead",
+            ],
+            "correct_answer": 0,
+            "explanation": "Decoupling architectural layers ensures high cohesion, loose coupling, testability, and horizontal scalability.",
+        },
+        {
+            "id": 2,
+            "question": "What is the primary benefit of enforcing strict validation schemas on incoming API payloads?",
+            "options": [
+                "It eliminates the need for database storage entirely",
+                "It prevents malformed data and malicious injection attacks before execution",
+                "It automatically deploys the code to production clusters",
+                "It compresses network traffic by 90%",
+            ],
+            "correct_answer": 1,
+            "explanation": "Strict schema validation acts as a first defensive line against corrupted data, type errors, and injection exploits.",
+        },
+        {
+            "id": 3,
+            "question": "When debugging performance bottlenecks in real-time workloads, what should be evaluated first?",
+            "options": [
+                "Rebooting all production server nodes",
+                "Database query execution plans, indexing, and I/O latency profiles",
+                "Changing the UI color theme",
+                "Removing unit testing assertions",
+            ],
+            "correct_answer": 1,
+            "explanation": "Database queries and unindexed table scans represent the vast majority of latency bottlenecks in production web systems.",
+        },
+        {
+            "id": 4,
+            "question": "Which of the following is considered an industry standard for securing confidential API access tokens?",
+            "options": [
+                "Committing plaintext secrets to public version control repositories",
+                "Using encrypted environment variables and secret management vaults",
+                "Writing tokens into client-side console logs",
+                "Sharing keys via unencrypted text messages",
+            ],
+            "correct_answer": 1,
+            "explanation": "Secret management vaults and encrypted runtime environment variables prevent catastrophic credential leakage.",
+        },
+        {
+            "id": 5,
+            "question": "What is the fundamental objective of automated Continuous Integration (CI) pipelines?",
+            "options": [
+                "To replace human software developers completely",
+                "To automatically build, lint, and run test suites on every code commit",
+                "To permanently prevent code modifications",
+                "To reduce code quality standards",
+            ],
+            "correct_answer": 1,
+            "explanation": "CI pipelines guarantee code quality and catch regressions immediately before merging into deployment branches.",
+        },
+    ]
+
     return _clean_and_parse_json(
         raw,
         fallback_default={
@@ -703,6 +769,8 @@ def generate_learning_syllabus(
             "skills_covered": f"{clean_topic}, Problem Solving, System Design, CI/CD, Enterprise Standards",
             "duration": duration or "4 Weeks",
             "eligibility": "Basic programming fundamentals and curiosity to build real-world systems.",
+            "passing_score": 60.0,
             "modules": fallback_modules,
+            "quiz": fallback_quiz,
         },
     )

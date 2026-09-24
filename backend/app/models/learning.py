@@ -25,6 +25,8 @@ class LearningProgram(Base):
     fee_amount = Column(Float, default=0.0)  # 0 for free
     created_by_user_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
     modules_json = Column(Text, nullable=True)  # JSON array of modules
+    quiz_json = Column(Text, nullable=True)  # JSON array of assessment questions
+    passing_score = Column(Float, default=60.0)  # Minimum percentage required for certificate
     auto_certify = Column(Boolean, default=True)
     created_at = Column(DateTime, default=datetime.utcnow)
 
@@ -44,6 +46,9 @@ class ProgramEnrollment(Base):
     progress_percent = Column(Float, default=0.0)
     completed_modules = Column(Text, default="[]")  # JSON string of completed module IDs
     completed_at = Column(DateTime, nullable=True)
+    quiz_score = Column(Float, nullable=True)  # Latest quiz score %
+    quiz_passed = Column(Boolean, default=False)
+    quiz_attempts = Column(Integer, default=0)
     certificate_issued = Column(Boolean, default=False)
     certificate_id = Column(Integer, ForeignKey("certificates.id", ondelete="SET NULL"), nullable=True)
 

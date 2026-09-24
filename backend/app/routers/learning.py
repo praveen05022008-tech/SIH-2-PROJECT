@@ -22,6 +22,8 @@ from app.schemas.learning import (
     LearningProgramUpdate,
     ProgramEnrollmentResponse,
     StudentEnrollmentDetail,
+    SubmitQuizRequest,
+    SubmitQuizResponse,
     UpdateProgressRequest,
 )
 from app.services.email_service import send_course_certificate_email
@@ -77,6 +79,7 @@ def _generate_certificate_for_enrollment(enrollment: ProgramEnrollment, db: Sess
     enrollment.status = "completed"
     enrollment.completed_at = datetime.utcnow()
     enrollment.progress_percent = 100.0
+    enrollment.quiz_passed = True
 
     # Auto-add to student portfolio if student profile exists
     if student_profile:
@@ -192,6 +195,8 @@ def get_learning_programs(
             external_link=p.external_link,
             fee_amount=p.fee_amount or 0.0,
             modules_json=p.modules_json,
+            quiz_json=p.quiz_json,
+            passing_score=p.passing_score or 60.0,
             auto_certify=p.auto_certify if p.auto_certify is not None else True,
             created_by_user_id=p.created_by_user_id,
             created_at=p.created_at,
@@ -200,6 +205,8 @@ def get_learning_programs(
             is_enrolled=bool(my_enr),
             my_progress=my_enr.progress_percent if my_enr else 0.0,
             my_status=my_enr.status if my_enr else None,
+            my_quiz_score=my_enr.quiz_score if my_enr else None,
+            my_quiz_passed=my_enr.quiz_passed if my_enr else False,
             my_certificate_id=my_enr.certificate_id if my_enr else None,
             my_verification_hash=v_hash,
         )
@@ -217,9 +224,10 @@ def create_learning_program(
     prog_data = data.dict()
     prog_data["created_by_user_id"] = current_user.id
 
-    # If modules_json not provided, automatically generate a structured 4-module syllabus
+    clean_topic = prog_data.get("title", "Technical Mastery")
+
+    # Default modules if not provided
     if not prog_data.get("modules_json"):
-        clean_topic = prog_data.get("title", "Technical Mastery")
         default_modules = [
             {
                 "id": 1,
@@ -259,6 +267,72 @@ def create_learning_program(
             },
         ]
         prog_data["modules_json"] = json.dumps(default_modules)
+
+    # Default quiz questionnaire if not provided
+    if not prog_data.get("quiz_json"):
+        default_quiz = [
+            {
+                "id": 1,
+                "question": f"In enterprise {clean_topic} architecture, which practice is critical for ensuring reliable scalability?",
+                "options": [
+                    "Decoupling modular service layers with clear interface contracts",
+                    "Coupling database queries tightly within presentation components",
+                    "Hardcoding configuration parameters directly in application files",
+                    "Disabling structured error boundaries to reduce overhead",
+                ],
+                "correct_answer": 0,
+                "explanation": "Decoupling architectural layers ensures high cohesion, loose coupling, testability, and horizontal scalability.",
+            },
+            {
+                "id": 2,
+                "question": "What is the primary benefit of enforcing strict validation schemas on incoming API payloads?",
+                "options": [
+                    "It eliminates the need for database storage entirely",
+                    "It prevents malformed data and malicious injection attacks before execution",
+                    "It automatically deploys the code to production clusters",
+                    "It compresses network traffic by 90%",
+                ],
+                "correct_answer": 1,
+                "explanation": "Strict schema validation acts as a first defensive line against corrupted data, type errors, and injection exploits.",
+            },
+            {
+                "id": 3,
+                "question": "When debugging performance bottlenecks in real-time workloads, what should be evaluated first?",
+                "options": [
+                    "Rebooting all production server nodes",
+                    "Database query execution plans, indexing, and I/O latency profiles",
+                    "Changing the UI color theme",
+                    "Removing unit testing assertions",
+                ],
+                "correct_answer": 1,
+                "explanation": "Database queries and unindexed table scans represent the vast majority of latency bottlenecks in production web systems.",
+            },
+            {
+                "id": 4,
+                "question": "Which of the following is considered an industry standard for securing confidential API access tokens?",
+                "options": [
+                    "Committing plaintext secrets to public version control repositories",
+                    "Using encrypted environment variables and secret management vaults",
+                    "Writing tokens into client-side console logs",
+                    "Sharing keys via unencrypted text messages",
+                ],
+                "correct_answer": 1,
+                "explanation": "Secret management vaults and encrypted runtime environment variables prevent catastrophic credential leakage.",
+            },
+            {
+                "id": 5,
+                "question": "What is the fundamental objective of automated Continuous Integration (CI) pipelines?",
+                "options": [
+                    "To replace human software developers completely",
+                    "To automatically build, lint, and run test suites on every code commit",
+                    "To permanently prevent code modifications",
+                    "To reduce code quality standards",
+                ],
+                "correct_answer": 1,
+                "explanation": "CI pipelines guarantee code quality and catch regressions immediately before merging into deployment branches.",
+            },
+        ]
+        prog_data["quiz_json"] = json.dumps(default_quiz)
 
     prog = LearningProgram(**prog_data)
     db.add(prog)
@@ -321,7 +395,7 @@ def ai_generate_syllabus_endpoint(
     req: AIGenerateSyllabusRequest,
     current_user: User = Depends(require_role(["industry", "institution", "admin"])),
 ):
-    """Uses multi-tier AI to draft complete syllabus, module breakdown, and skills in seconds."""
+    """Uses multi-tier AI to draft complete syllabus, module breakdown, and certification exam MCQs in seconds."""
     result = generate_learning_syllabus(
         topic=req.topic,
         program_type=req.program_type,
@@ -359,6 +433,9 @@ def enroll_in_program(
         status="enrolled",
         progress_percent=0.0,
         completed_modules="[]",
+        quiz_score=None,
+        quiz_passed=False,
+        quiz_attempts=0,
         certificate_issued=False,
     )
     db.add(enrollment)
@@ -426,32 +503,125 @@ def update_enrollment_progress(
         completed_set.discard(req.module_id)
 
     enrollment.completed_modules = json.dumps(list(completed_set))
-    calc_percent = round((len(completed_set) / total_modules) * 100.0, 1)
-    enrollment.progress_percent = min(calc_percent, 100.0)
+
+    # Modules account for up to 80% of progress; passing the certification assessment unlocks the final 20% & certificate!
+    has_quiz = bool(prog.quiz_json and prog.quiz_json != "[]")
+    module_ratio = len(completed_set) / total_modules
+
+    if has_quiz:
+        base_progress = round(module_ratio * 80.0, 1)
+        if enrollment.quiz_passed:
+            enrollment.progress_percent = 100.0
+        else:
+            enrollment.progress_percent = min(base_progress, 80.0)
+    else:
+        enrollment.progress_percent = round(module_ratio * 100.0, 1)
 
     if enrollment.progress_percent > 0 and enrollment.status == "enrolled":
         enrollment.status = "in_progress"
 
-    certificate_data = None
-    # Auto-certify trigger if 100% completed
-    if enrollment.progress_percent >= 100.0 and prog.auto_certify and not enrollment.certificate_issued:
-        cert = _generate_certificate_for_enrollment(enrollment, db)
-        certificate_data = {
-            "certificate_number": cert.certificate_number,
-            "verification_hash": cert.verification_hash,
-            "issue_date": cert.issue_date.isoformat(),
-        }
-    else:
-        db.commit()
+    db.commit()
 
     return {
         "success": True,
         "progress_percent": enrollment.progress_percent,
         "status": enrollment.status,
         "completed_modules": list(completed_set),
+        "quiz_passed": enrollment.quiz_passed,
         "certificate_issued": enrollment.certificate_issued,
-        "certificate": certificate_data,
     }
+
+
+@router.post("/{program_id}/submit-quiz", response_model=SubmitQuizResponse)
+def submit_certification_quiz(
+    program_id: int,
+    req: SubmitQuizRequest,
+    current_user: User = Depends(require_role(["student"])),
+    db: Session = Depends(get_db),
+):
+    """
+    Submits student's answers to the certification exam.
+    Only if the student passes (>= passing_score) is the certificate generated & emailed.
+    """
+    prog = db.query(LearningProgram).filter(LearningProgram.id == program_id).first()
+    if not prog:
+        raise HTTPException(status_code=404, detail="Program not found.")
+
+    enrollment = (
+        db.query(ProgramEnrollment)
+        .filter(
+            ProgramEnrollment.program_id == program_id,
+            ProgramEnrollment.student_id == current_user.id,
+        )
+        .first()
+    )
+    if not enrollment:
+        raise HTTPException(status_code=400, detail="Please enroll in this program before taking the exam.")
+
+    try:
+        questions = json.loads(prog.quiz_json or "[]")
+    except Exception:
+        questions = []
+
+    if not questions:
+        raise HTTPException(status_code=400, detail="No assessment questions defined for this program.")
+
+    total_q = len(questions)
+    correct_count = 0
+    detailed_results = []
+
+    for q in questions:
+        qid_str = str(q.get("id"))
+        correct_idx = q.get("correct_answer", 0)
+        selected_idx = req.answers.get(qid_str)
+
+        is_correct = selected_idx is not None and int(selected_idx) == int(correct_idx)
+        if is_correct:
+            correct_count += 1
+
+        detailed_results.append(
+            {
+                "question_id": q.get("id"),
+                "question": q.get("question"),
+                "options": q.get("options", []),
+                "selected_answer": selected_idx,
+                "correct_answer": correct_idx,
+                "is_correct": is_correct,
+                "explanation": q.get("explanation", ""),
+            }
+        )
+
+    score_pct = round((correct_count / total_q) * 100.0, 1)
+    passing_th = prog.passing_score if prog.passing_score is not None else 60.0
+    passed = score_pct >= passing_th
+
+    enrollment.quiz_score = score_pct
+    enrollment.quiz_attempts = (enrollment.quiz_attempts or 0) + 1
+    enrollment.quiz_passed = passed
+
+    certificate_response = None
+    if passed:
+        enrollment.progress_percent = 100.0
+        enrollment.status = "completed"
+        if prog.auto_certify and not enrollment.certificate_issued:
+            cert = _generate_certificate_for_enrollment(enrollment, db)
+            certificate_response = CertificateResponse.from_orm(cert)
+        else:
+            db.commit()
+    else:
+        db.commit()
+
+    return SubmitQuizResponse(
+        score_percent=score_pct,
+        total_questions=total_q,
+        correct_count=correct_count,
+        passed=passed,
+        passing_threshold=passing_th,
+        attempts=enrollment.quiz_attempts,
+        certificate_issued=enrollment.certificate_issued,
+        certificate=certificate_response,
+        detailed_results=detailed_results,
+    )
 
 
 @router.get("/industry/manage", response_model=List[LearningProgramResponse])
@@ -492,6 +662,8 @@ def get_industry_published_programs(
             external_link=p.external_link,
             fee_amount=p.fee_amount or 0.0,
             modules_json=p.modules_json,
+            quiz_json=p.quiz_json,
+            passing_score=p.passing_score or 60.0,
             auto_certify=p.auto_certify if p.auto_certify is not None else True,
             created_by_user_id=p.created_by_user_id,
             created_at=p.created_at,
@@ -554,6 +726,9 @@ def get_program_enrolled_students(
                 progress_percent=enr.progress_percent,
                 completed_modules=enr.completed_modules,
                 completed_at=enr.completed_at,
+                quiz_score=enr.quiz_score,
+                quiz_passed=enr.quiz_passed,
+                quiz_attempts=enr.quiz_attempts or 0,
                 certificate_issued=enr.certificate_issued,
                 certificate_number=cert_num,
                 verification_hash=v_hash,
