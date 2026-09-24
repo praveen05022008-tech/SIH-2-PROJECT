@@ -97,57 +97,36 @@ export function InstitutionDashboard() {
             </p>
           </div>
 
-          {/* Right Vector University Building Illustration */}
+          {/* Right University Building Image */}
           <div
             style={{
               position: 'absolute',
-              right: '24px',
-              top: '50%',
-              transform: 'translateY(-50%)',
-              width: '320px',
-              height: '110px',
-              opacity: 0.9,
-              pointerEvents: 'none',
+              right: 0,
+              top: 0,
+              bottom: 0,
+              width: '46%',
+              maxWidth: '540px',
+              height: '100%',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'flex-end',
+              pointerEvents: 'none',
+              overflow: 'hidden',
+              zIndex: 1,
             }}
           >
-            <svg width="300" height="110" viewBox="0 0 300 110" fill="none">
-              {/* Background Trees & Greenery */}
-              <ellipse cx="40" cy="85" rx="16" ry="24" fill="#93C5FD" fillOpacity="0.5" />
-              <ellipse cx="65" cy="88" rx="14" ry="20" fill="#60A5FA" fillOpacity="0.4" />
-              <ellipse cx="240" cy="88" rx="15" ry="22" fill="#60A5FA" fillOpacity="0.4" />
-              <ellipse cx="265" cy="85" rx="16" ry="24" fill="#93C5FD" fillOpacity="0.5" />
-
-              {/* Main Building Base & Steps */}
-              <rect x="75" y="45" width="150" height="60" rx="2" fill="#FFFFFF" fillOpacity="0.85" stroke="#93C5FD" strokeWidth="1.5" />
-              <rect x="68" y="100" width="164" height="6" rx="1" fill="#BFDBFE" />
-              <rect x="62" y="105" width="176" height="5" rx="1" fill="#93C5FD" />
-
-              {/* Classical Pillars / Columns */}
-              <rect x="88" y="52" width="10" height="48" rx="1" fill="#BFDBFE" />
-              <rect x="114" y="52" width="10" height="48" rx="1" fill="#BFDBFE" />
-              <rect x="140" y="52" width="10" height="48" rx="1" fill="#BFDBFE" />
-              <rect x="166" y="52" width="10" height="48" rx="1" fill="#BFDBFE" />
-              <rect x="192" y="52" width="10" height="48" rx="1" fill="#BFDBFE" />
-
-              {/* Central Dome / Rotunda */}
-              <path d="M 120,45 C 120,22 180,22 180,45 Z" fill="#93C5FD" fillOpacity="0.7" stroke="#60A5FA" strokeWidth="1.2" />
-              <rect x="147" y="14" width="6" height="10" fill="#3B82F6" />
-              <circle cx="150" cy="12" r="3" fill="#2563EB" />
-
-              {/* Triangular Pediment / Gable */}
-              <polygon points="150,26 70,46 230,46" fill="#FFFFFF" stroke="#93C5FD" strokeWidth="1.5" />
-              <circle cx="150" cy="38" r="4" fill="#60A5FA" />
-
-              {/* Windows Row */}
-              <rect x="91" y="62" width="4" height="8" rx="1" fill="#60A5FA" />
-              <rect x="117" y="62" width="4" height="8" rx="1" fill="#60A5FA" />
-              <rect x="143" y="62" width="4" height="8" rx="1" fill="#60A5FA" />
-              <rect x="169" y="62" width="4" height="8" rx="1" fill="#60A5FA" />
-              <rect x="195" y="62" width="4" height="8" rx="1" fill="#60A5FA" />
-            </svg>
+            <img
+              src="/institution-banner.png"
+              alt="Institution Campus Building"
+              style={{
+                height: '100%',
+                width: '100%',
+                objectFit: 'contain',
+                objectPosition: 'right center',
+                mixBlendMode: 'multiply',
+                opacity: 0.95,
+              }}
+            />
           </div>
         </div>
 

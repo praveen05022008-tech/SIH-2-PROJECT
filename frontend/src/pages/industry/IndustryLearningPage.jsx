@@ -19,7 +19,8 @@ import {
   Layers,
   Upload,
   Download,
-  Code
+  Code,
+  HelpCircle
 } from 'lucide-react';
 import { LoadingSpinner } from '../../components/common/LoadingSpinner';
 import { CertificateModal } from '../../components/common/CertificateModal';

@@ -148,18 +148,6 @@ export function CertificateDocument({ certificate, className = '' }) {
         <polygon points="215,0 230,0 0,178 0,165" fill="url(#goldRibbonGrad)" />
         {/* Diagonal Gold Accent Ribbon Strip 2 */}
         <polygon points="145,0 155,0 0,240 0,225" fill="url(#goldRibbonGrad)" opacity="0.8" />
-
-        {/* ─── BOTTOM-RIGHT CORNER GEOMETRIC POLYGON LAYER ─── */}
-        {/* Navy Facet 1 */}
-        <polygon points="1000,680 785,680 1000,515" fill="url(#navyCornerGrad)" />
-        {/* Navy Facet 2 */}
-        <polygon points="1000,680 855,680 1000,455" fill="url(#navyFacetGrad)" opacity="0.95" />
-        {/* Navy Facet 3 Sharp Slice */}
-        <polygon points="1000,680 740,680 1000,565" fill="#071933" />
-        {/* Diagonal Gold Accent Ribbon Strip 1 */}
-        <polygon points="785,680 770,680 1000,502 1000,515" fill="url(#goldRibbonGrad)" />
-        {/* Diagonal Gold Accent Ribbon Strip 2 */}
-        <polygon points="855,680 845,680 1000,440 1000,455" fill="url(#goldRibbonGrad)" opacity="0.8" />
       </svg>
 
       {/* ─── CERTIFICATE MAIN CONTENT ─── */}
@@ -277,67 +265,28 @@ export function CertificateDocument({ certificate, className = '' }) {
             has successfully fulfilled all curriculum requirements, practical assignments, and competency milestones for the professional training program in
           </p>
 
-          {/* ─── PROGRAM / COURSE TITLE BOX (Light Blue Box with Ornate Curly Brackets) ─── */}
+          {/* ─── PROGRAM / COURSE TITLE ─── */}
           <div
             style={{
-              position: 'relative',
-              display: 'inline-flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              backgroundColor: '#F0F5FF',
-              border: '1.5px solid #3B82F6',
-              borderRadius: '8px',
-              padding: '12px 36px',
               margin: '0 auto 14px',
-              maxWidth: '92%',
-              boxShadow: '0 2px 8px rgba(59, 130, 246, 0.08)',
+              maxWidth: '90%',
+              textAlign: 'center',
             }}
           >
-            {/* Left Bracket Flourish Decoration */}
-            <svg
-              width="14"
-              height="36"
-              viewBox="0 0 14 36"
-              style={{ position: 'absolute', left: '-7px', top: '50%', transform: 'translateY(-50%)' }}
-            >
-              <path
-                d="M 12,2 C 6,6 4,14 1,18 C 4,22 6,30 12,34"
-                fill="none"
-                stroke="#2563EB"
-                strokeWidth="2"
-                strokeLinecap="round"
-              />
-            </svg>
-
-            {/* Program Title Text */}
             <span
               style={{
-                fontFamily: "'Cinzel', 'Playfair Display', 'Inter', Georgia, sans-serif",
-                fontSize: 'clamp(17px, 2.2vw, 23px)',
+                fontFamily: "'Cinzel', 'Playfair Display', 'Inter', Georgia, serif",
+                fontSize: 'clamp(18px, 2.4vw, 25px)',
                 fontWeight: 800,
                 color: '#0F2942',
-                letterSpacing: '0.2px',
+                letterSpacing: '0.4px',
+                lineHeight: 1.3,
                 textAlign: 'center',
+                display: 'inline-block',
               }}
             >
               {programTitle}
             </span>
-
-            {/* Right Bracket Flourish Decoration */}
-            <svg
-              width="14"
-              height="36"
-              viewBox="0 0 14 36"
-              style={{ position: 'absolute', right: '-7px', top: '50%', transform: 'translateY(-50%)' }}
-            >
-              <path
-                d="M 2,2 C 8,6 10,14 13,18 C 10,22 8,30 2,34"
-                fill="none"
-                stroke="#2563EB"
-                strokeWidth="2"
-                strokeLinecap="round"
-              />
-            </svg>
           </div>
 
           {/* Key Competencies Verified Section */}
