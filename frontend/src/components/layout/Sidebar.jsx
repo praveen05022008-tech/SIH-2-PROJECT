@@ -24,7 +24,8 @@ import {
   BarChart3,
   X,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  Plus
 } from 'lucide-react';
 
 function AicSidebarLogo({ collapsed = false }) {
