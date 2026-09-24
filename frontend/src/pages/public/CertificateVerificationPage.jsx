@@ -214,12 +214,23 @@ export function CertificateVerificationPage() {
                 >
                   <div>
                     <div style={{ fontSize: '11px', color: '#64748B', fontWeight: 600, textTransform: 'uppercase' }}>
-                      Recipient Student
+                      {cert.recipient_role === 'faculty' ? 'Recipient Academician' : 'Recipient Student'}
                     </div>
-                    <div style={{ fontSize: '15px', fontWeight: 700, color: '#0F172A', marginTop: '3px' }}>
-                      {cert.student_name}
+                    <div style={{ fontSize: '15px', fontWeight: 700, color: '#0F172A', marginTop: '3px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <span>{cert.student_name}</span>
+                      {cert.recipient_role === 'faculty' && (
+                        <span style={{ fontSize: '10px', padding: '1px 6px', borderRadius: '4px', backgroundColor: '#F3E8FF', color: '#7E22CE', fontWeight: 800 }}>FACULTY</span>
+                      )}
                     </div>
-                    <div style={{ fontSize: '12px', color: '#64748B' }}>{cert.student_email}</div>
+                    <div style={{ fontSize: '12px', color: '#64748B' }}>
+                      {cert.designation ? `${cert.designation}` : ''}
+                      {cert.designation && cert.institution_name ? ` • ${cert.institution_name}` : cert.institution_name ? `${cert.institution_name}` : cert.student_email}
+                    </div>
+                    {cert.credits && (
+                      <div style={{ marginTop: '4px', fontSize: '11.5px', color: '#047857', fontWeight: 700 }}>
+                        ★ {cert.credits} FDP / CPE Academic Credits
+                      </div>
+                    )}
                   </div>
 
                   <div>

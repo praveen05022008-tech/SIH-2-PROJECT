@@ -14,20 +14,11 @@ import {
   Send,
   Trash2,
   Edit,
-  Search,
-  ExternalLink,
   ShieldCheck,
-  GraduationCap,
   X,
   Layers,
-  ChevronRight,
-  Mail,
-  Zap,
-  HelpCircle,
-  Check,
   Upload,
   Download,
-  FileText,
   Code
 } from 'lucide-react';
 import { LoadingSpinner } from '../../components/common/LoadingSpinner';

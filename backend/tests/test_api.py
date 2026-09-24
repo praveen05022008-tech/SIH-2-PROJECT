@@ -29,9 +29,10 @@ def test_admin_login():
     assert "access_token" in data
 
 
-def test_student_registration_and_flow():
+def test_registration_and_flow():
     ts = int(time.time())
-    res = client.post(
+    # 1. Direct student registration should be rejected per institutional roster policy
+    rejected_res = client.post(
         "/api/v1/auth/register",
         json={
             "email": f"candidate_{ts}@domain.com",
@@ -39,13 +40,33 @@ def test_student_registration_and_flow():
             "password": "Password123!",
             "role": "student",
             "full_name": "Test Candidate",
-            "course": "B.Tech Computer Science",
+        },
+    )
+    assert rejected_res.status_code == 400
+
+    # 2. Industry partner registration is permitted and requires admin approval
+    res = client.post(
+        "/api/v1/auth/register",
+        json={
+            "email": f"enterprise_{ts}@partner.com",
+            "username": f"corp_{ts}",
+            "password": "Password123!",
+            "role": "industry",
+            "full_name": "Apex Industry Lead",
+            "company_name": "Apex Enterprise Tech",
         },
     )
     assert res.status_code == 201
     data = res.json()
     assert data["is_approved"] is False
     assert data["user_id"] > 0
+
+
+def test_fdp_learning_programs():
+    res = client.get("/api/v1/learning-programs")
+    assert res.status_code == 200
+    programs = res.json()
+    assert isinstance(programs, list)
 
 
 def test_ai_skill_gap_roadmap():

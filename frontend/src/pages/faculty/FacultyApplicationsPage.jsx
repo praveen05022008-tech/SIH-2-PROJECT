@@ -3,7 +3,18 @@ import { Link } from 'react-router-dom';
 import { api } from '../../services/api';
 import { PortalLayout } from '../../components/layout/PortalLayout';
 import { LoadingSpinner } from '../../components/common/LoadingSpinner';
-import { FileCheck, Building, Clock, ArrowRight, BookOpen, Briefcase } from 'lucide-react';
+import { getDocumentViewUrl } from '../../utils/fileUrl';
+import {
+  FileCheck,
+  Building,
+  Clock,
+  ArrowRight,
+  BookOpen,
+  Briefcase,
+  CheckCircle,
+  ExternalLink,
+  Award,
+} from 'lucide-react';
 
 export function FacultyApplicationsPage() {
   const [applications, setApplications] = useState([]);
@@ -44,8 +55,10 @@ export function FacultyApplicationsPage() {
       <div className="card">
         <div className="card-header">
           <div>
-            <h3 className="card-title">Applied Sabbaticals & Training Programs</h3>
-            <p className="text-muted" style={{ fontSize: '12px' }}>Track your corporate training, FDPs, and industrial immersion submissions</p>
+            <h3 className="card-title">Applied Sabbaticals &amp; Training Programs</h3>
+            <p className="text-muted" style={{ fontSize: '12px' }}>
+              Track your corporate training, FDPs, and industrial immersion submissions
+            </p>
           </div>
           <span className="badge badge-info">{applications.length} Applications</span>
         </div>
@@ -69,6 +82,8 @@ export function FacultyApplicationsPage() {
                   <th>Opportunity Title</th>
                   <th>Host Enterprise</th>
                   <th>Category</th>
+                  <th>Match Fit</th>
+                  <th>NOC Status</th>
                   <th>Application Status</th>
                   <th>Date Applied</th>
                   <th>Statement / Notes</th>
@@ -96,6 +111,39 @@ export function FacultyApplicationsPage() {
                       <span className="badge badge-neutral" style={{ textTransform: 'capitalize' }}>
                         {(a.opportunity?.type || 'Training').replace('_', ' ')}
                       </span>
+                    </td>
+                    <td>
+                      {a.match_score !== null && a.match_score !== undefined ? (
+                        <span style={{ fontSize: '12.5px', fontWeight: 700, color: a.match_score >= 70 ? '#047857' : '#2563EB' }}>
+                          {Math.round(a.match_score)}%
+                        </span>
+                      ) : (
+                        <span style={{ color: '#94A3B8', fontSize: '12px' }}>—</span>
+                      )}
+                    </td>
+                    <td>
+                      {a.noc_document_url ? (
+                        <a
+                          href={getDocumentViewUrl(a.noc_document_url)}
+                          target="_blank"
+                          rel="noreferrer"
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '4px',
+                            color: '#047857',
+                            backgroundColor: '#ECFDF5',
+                            border: '1px solid #A7F3D0',
+                            padding: '3px 8px',
+                            borderRadius: '4px',
+                            fontSize: '11px',
+                            fontWeight: 700,
+                            textDecoration: 'none',
+                          }}
+                        >
+                          <CheckCircle size={12} /> NOC Verified
+                        </a>
+                      ) : null}
                     </td>
                     <td>{getStatusBadge(a.status)}</td>
                     <td>{new Date(a.applied_at).toLocaleDateString()}</td>

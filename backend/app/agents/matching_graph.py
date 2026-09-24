@@ -162,14 +162,16 @@ def create_candidate_matching_graph(db: Session):
             )
         )
 
-        usr_msg = HumanMessage(content=f"""
+        usr_msg = HumanMessage(
+            content=f"""
             Opportunity: {json.dumps(state.get('opportunity_data', {}))}
             Candidate Profile: {json.dumps(state.get('candidate_profile', {}))}
             Deterministic Score: {state.get('deterministic_score', 0)}%
             Eligibility: {state.get('eligibility_passed', True)}
             Reasons: {json.dumps(state.get('match_reasons', []))}
             Missing: {json.dumps(state.get('missing_skills', []))}
-            """)
+            """
+        )
 
         try:
             response = llm.invoke([sys_msg, usr_msg])

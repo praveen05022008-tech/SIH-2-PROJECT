@@ -35,7 +35,7 @@ import { FacultyProfilePage } from './pages/faculty/FacultyProfilePage';
 import { FacultyOpportunitiesPage } from './pages/faculty/FacultyOpportunitiesPage';
 import { FacultyApplicationsPage } from './pages/faculty/FacultyApplicationsPage';
 import { FacultyCollaborationsPage } from './pages/faculty/FacultyCollaborationsPage';
-import { StudentLearningPage as FacultyLearningPage } from './pages/student/StudentLearningPage';
+import { FacultyLearningPage } from './pages/faculty/FacultyLearningPage';
 
 // Industry Pages
 import { IndustryDashboard } from './pages/industry/IndustryDashboard';
