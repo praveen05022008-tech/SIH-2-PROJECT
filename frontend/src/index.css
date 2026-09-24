@@ -1,11 +1,11 @@
 :root {
-  --color-primary: #1E2A44;
-  --color-secondary: #3B5BDB;
-  --color-bg: #F5F6F8;
+  --color-primary: #0F172A;
+  --color-secondary: #2563EB;
+  --color-bg: #F8FAFC;
   --color-surface: #FFFFFF;
-  --color-border: #E2E5EA;
-  --color-text: #1F2937;
-  --color-text-muted: #6B7280;
+  --color-border: #E2E8F0;
+  --color-text: #0F172A;
+  --color-text-muted: #64748B;
 
   --color-success: #16803C;
   --color-warning: #B7791F;
@@ -13,9 +13,9 @@
   --color-info: #2563EB;
 
   --sidebar-width: 260px;
-  --header-height: 64px;
-  --radius: 6px;
-  --radius-sm: 4px;
+  --header-height: 70px;
+  --radius: 14px;
+  --radius-sm: 8px;
 
   --font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 }
@@ -61,6 +61,7 @@ a:hover {
 .app-container {
   display: flex;
   min-height: 100vh;
+  background-color: var(--color-bg);
 }
 
 .main-content {
@@ -72,8 +73,8 @@ a:hover {
 }
 
 .page-body {
-  padding: 28px;
-  max-width: 1380px;
+  padding: 28px 32px;
+  max-width: 1440px;
   width: 100%;
   margin: 0 auto;
 }
@@ -81,13 +82,13 @@ a:hover {
 /* Typography */
 h1, h2, h3, h4, h5, h6 {
   color: var(--color-primary);
-  font-weight: 600;
+  font-weight: 700;
   line-height: 1.25;
 }
 
-h1 { font-size: 24px; }
-h2 { font-size: 20px; }
-h3 { font-size: 16px; }
+h1 { font-size: 22px; }
+h2 { font-size: 18px; }
+h3 { font-size: 15px; }
 
 p {
   font-size: 14px;
@@ -100,12 +101,22 @@ p {
 /* Sidebar */
 .sidebar {
   width: var(--sidebar-width);
-  background-color: var(--color-primary);
+  height: 100vh;
+  position: sticky;
+  top: 0;
+  background: linear-gradient(180deg, #0B132B 0%, #0D1B3E 60%, #111E48 100%);
   color: #FFFFFF;
   display: flex;
   flex-direction: column;
   flex-shrink: 0;
-  border-right: 1px solid #2B3856;
+  border-right: 1px solid rgba(255, 255, 255, 0.06);
+  overflow: hidden;
+  transition: width 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+  z-index: 30;
+}
+
+.sidebar.sidebar-collapsed {
+  width: 72px;
 }
 
 .sidebar-brand {
@@ -114,7 +125,7 @@ p {
   align-items: center;
   gap: 12px;
   padding: 0 20px;
-  border-bottom: 1px solid #2B3856;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
 }
 
 .sidebar-brand-title {
@@ -130,9 +141,9 @@ p {
 }
 
 .sidebar-nav {
-  padding: 16px 10px;
+  padding: 12px 10px;
   flex: 1;
-  overflow-y: auto;
+  overflow: hidden;
   display: flex;
   flex-direction: column;
   gap: 4px;

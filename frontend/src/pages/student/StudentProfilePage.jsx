@@ -21,6 +21,7 @@ import {
   ExternalLink,
   Code,
   Globe,
+  Eye,
   X
 } from 'lucide-react';
 import { ENGINEERING_DEPARTMENTS } from '../../constants/departments';
@@ -31,6 +32,7 @@ export function StudentProfilePage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const initialTab = searchParams.get('tab') || 'profile';
   const [activeTab, setActiveTab] = useState(initialTab);
+  const [previewDoc, setPreviewDoc] = useState(null); // { title: string, url: string }
   const [profile, setProfile] = useState({
     full_name: '',
     phone: '',
@@ -667,9 +669,14 @@ export function StudentProfilePage() {
             {profile.resume_url ? (
               <div style={{ marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '12px' }}>
                 <span className="badge badge-success">Cloudinary Secured</span>
-                <a href={getDocumentViewUrl(profile.resume_url)} target="_blank" rel="noreferrer" className="btn btn-outline btn-sm" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                  <ExternalLink size={12} /> View Current Resume Document
-                </a>
+                <button
+                  type="button"
+                  onClick={() => setPreviewDoc({ title: 'Curriculum Vitae / Resume', url: getDocumentViewUrl(profile.resume_url) })}
+                  className="btn btn-outline btn-sm"
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+                >
+                  <Eye size={13} /> View Current Resume Document
+                </button>
               </div>
             ) : (
               <p className="text-muted" style={{ fontSize: '13px', marginBottom: '14px' }}>
@@ -848,15 +855,12 @@ export function StudentProfilePage() {
             ) : (
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '16px' }}>
                 {documents.map((doc) => (
-                  <div key={doc.id} style={{ border: '1px solid #E2E5EA', borderRadius: '6px', padding: '16px', backgroundColor: '#F8FAFC' }}>
+                  <div key={doc.id} style={{ border: '1px solid #E2E8F0', borderRadius: '8px', padding: '16px', backgroundColor: '#F8FAFC' }}>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                         <FileText size={18} color="#3B5BDB" />
-                        <h4 style={{ fontSize: '14.5px', color: '#1E2A44', margin: 0 }}>{doc.title}</h4>
+                        <h4 style={{ fontSize: '14.5px', color: '#1E2A44', margin: 0, fontWeight: 700 }}>{doc.title}</h4>
                       </div>
-                      <span className={`badge ${doc.verification_status === 'verified' ? 'badge-success' : 'badge-neutral'}`} style={{ textTransform: 'capitalize' }}>
-                        {doc.verification_status}
-                      </span>
                     </div>
                     <p className="text-muted" style={{ fontSize: '12px', marginBottom: '10px' }}>
                       Type: <strong style={{ textTransform: 'capitalize' }}>{doc.document_type}</strong> • Size: {Math.round(doc.file_size / 1024)} KB
@@ -865,9 +869,14 @@ export function StudentProfilePage() {
                       <span style={{ fontSize: '11px', color: '#64748B' }}>
                         {new Date(doc.uploaded_at).toLocaleDateString()}
                       </span>
-                      <a href={getDocumentViewUrl(doc)} target="_blank" rel="noreferrer" className="btn btn-outline btn-sm" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                        <ExternalLink size={12} /> View File
-                      </a>
+                      <button
+                        type="button"
+                        onClick={() => setPreviewDoc({ title: doc.title, url: getDocumentViewUrl(doc) })}
+                        className="btn btn-outline btn-sm"
+                        style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '12.5px', fontWeight: 600 }}
+                      >
+                        <Eye size={13} /> View File
+                      </button>
                     </div>
                   </div>
                 ))}
@@ -1367,6 +1376,52 @@ export function StudentProfilePage() {
                 )}
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: In-App Document Preview Modal */}
+      {previewDoc && (
+        <div className="modal-overlay" style={{ zIndex: 1000 }} onClick={() => setPreviewDoc(null)}>
+          <div
+            className="modal-content"
+            style={{ maxWidth: '920px', width: '92vw', height: '88vh', display: 'flex', flexDirection: 'column', padding: '20px' }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px', paddingBottom: '12px', borderBottom: '1px solid #E2E8F0' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <FileText size={20} color="#2563EB" />
+                <h3 style={{ fontSize: '16px', fontWeight: 700, color: '#0F172A', margin: 0 }}>
+                  {previewDoc.title || 'Document Preview'}
+                </h3>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <button
+                  type="button"
+                  onClick={() => setPreviewDoc(null)}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    cursor: 'pointer',
+                    color: '#64748B',
+                    padding: '4px',
+                    display: 'flex',
+                    alignItems: 'center'
+                  }}
+                  title="Close preview"
+                >
+                  <X size={20} />
+                </button>
+              </div>
+            </div>
+
+            <div style={{ flex: 1, backgroundColor: '#F8FAFC', borderRadius: '8px', overflow: 'hidden', position: 'relative' }}>
+              <iframe
+                src={previewDoc.url}
+                title={previewDoc.title || 'Document Preview'}
+                style={{ width: '100%', height: '100%', border: 'none' }}
+              />
+            </div>
           </div>
         </div>
       )}

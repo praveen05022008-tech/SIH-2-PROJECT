@@ -136,7 +136,7 @@ def get_public_verified_portfolio(identifier: str, db: Session = Depends(get_db)
 
     # Extract verified skills
     verified_skills = []
-    for ss in (student.student_skills if hasattr(student, "student_skills") else []):
+    for ss in student.student_skills if hasattr(student, "student_skills") else []:
         if ss.skill:
             verified_skills.append(
                 {

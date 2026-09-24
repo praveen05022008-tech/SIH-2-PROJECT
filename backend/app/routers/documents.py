@@ -117,7 +117,9 @@ def get_document_file(document_id: int, db: Session = Depends(get_db)):
                 fpath = os.path.join(settings.UPLOAD_DIR, fname)
                 if os.path.isfile(fpath):
                     return FileResponse(
-                        fpath, media_type=doc.mime_type or "application/pdf", filename=f"{doc.title}.pdf"
+                        fpath,
+                        media_type=doc.mime_type or "application/pdf",
+                        content_disposition_type="inline",
                     )
 
     if doc.file_path.startswith("http"):
@@ -126,6 +128,7 @@ def get_document_file(document_id: int, db: Session = Depends(get_db)):
         return FileResponse(
             os.path.join(settings.UPLOAD_DIR, os.path.basename(doc.file_path)),
             media_type=doc.mime_type or "application/pdf",
+            content_disposition_type="inline",
         )
     else:
         raise HTTPException(status_code=404, detail="Document content not available on disk")

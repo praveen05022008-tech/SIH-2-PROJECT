@@ -21,15 +21,58 @@ import {
   ShieldCheck,
   TrendingUp,
   AlertCircle,
-  X
+  X,
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react';
+
+function AicSidebarLogo({ collapsed = false }) {
+  return (
+    <div
+      style={{
+        width: collapsed ? 36 : 34,
+        height: collapsed ? 36 : 34,
+        borderRadius: '10px',
+        background: 'linear-gradient(135deg, #3B82F6 0%, #1D4ED8 100%)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        boxShadow: '0 4px 12px rgba(37, 99, 235, 0.35)',
+        color: '#FFFFFF',
+        flexShrink: 0
+      }}
+    >
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+        <polyline points="9 22 9 12 15 12 15 22" />
+      </svg>
+    </div>
+  );
+}
 
 export function Sidebar({ isOpen = false, onClose }) {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [showIssueModal, setShowIssueModal] = useState(false);
+  const [isCollapsed, setIsCollapsed] = useState(() => {
+    try {
+      return localStorage.getItem('aic_sidebar_collapsed') === 'true';
+    } catch {
+      return false;
+    }
+  });
 
   if (!user) return null;
+
+  const toggleCollapsed = () => {
+    setIsCollapsed((prev) => {
+      const next = !prev;
+      try {
+        localStorage.setItem('aic_sidebar_collapsed', String(next));
+      } catch {}
+      return next;
+    });
+  };
 
   const handleLogout = async () => {
     await logout();
@@ -64,7 +107,6 @@ export function Sidebar({ isOpen = false, onClose }) {
           { to: '/industry/dashboard', label: 'Industry Dashboard', icon: LayoutDashboard },
           { to: '/industry/profile', label: 'Company Profile', icon: Building2 },
           { to: '/industry/post-opportunity', label: 'Post Opportunity', icon: Briefcase },
-          { to: '/industry/my-opportunities', label: 'My Opportunities', icon: FileText },
           { to: '/industry/applications', label: 'Applicant Pipeline', icon: Users },
           { to: '/industry/mentorship', label: 'Internship Tracking', icon: GraduationCap },
           { to: '/industry/collaborations', label: 'Institutional Collab', icon: FolderGit2 },
@@ -102,100 +144,180 @@ export function Sidebar({ isOpen = false, onClose }) {
     <>
       {isOpen && <div className="sidebar-backdrop" onClick={onClose} />}
 
-      <aside className={`sidebar ${isOpen ? 'sidebar-mobile-open' : ''}`}>
-        <div className="sidebar-brand" style={{ justifyContent: 'space-between' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <img src="/logo.svg" alt="AIC Logo" width="32" height="32" />
-            <div>
-              <div className="sidebar-brand-title">AIC PORTAL</div>
-              <div className="sidebar-brand-subtitle">Collaboration Portal</div>
-            </div>
-          </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="sidebar-close-btn"
-            title="Close navigation"
-            aria-label="Close sidebar"
+      <aside
+        className={`sidebar ${isCollapsed ? 'sidebar-collapsed' : ''} ${isOpen ? 'sidebar-mobile-open' : ''}`}
+        style={{
+          width: isCollapsed ? '72px' : '260px',
+          height: '100vh',
+          position: 'sticky',
+          top: 0,
+          display: 'flex',
+          flexDirection: 'column',
+          justifyContent: 'space-between',
+          overflow: 'hidden',
+          transition: 'width 0.22s cubic-bezier(0.4, 0, 0.2, 1)',
+          zIndex: 30,
+          flexShrink: 0
+        }}
+      >
+        {/* Top Header & Navigation Section */}
+        <div style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+          {/* Brand Header */}
+          <div
+            style={{
+              padding: isCollapsed ? '16px 12px' : '18px 16px 18px 20px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: isCollapsed ? 'center' : 'space-between',
+              gap: '10px'
+            }}
           >
-            <X size={20} />
-          </button>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <AicSidebarLogo collapsed={isCollapsed} />
+              {!isCollapsed && (
+                <div>
+                  <div style={{ fontSize: '15px', fontWeight: 800, color: '#FFFFFF', letterSpacing: '-0.2px', lineHeight: 1.2 }}>
+                    AIC PORTAL
+                  </div>
+                  <div style={{ fontSize: '11px', color: '#94A3B8', fontWeight: 500 }}>
+                    Collaboration Portal
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Collapse Toggle Button (Desktop) */}
+            <button
+              type="button"
+              onClick={toggleCollapsed}
+              title={isCollapsed ? 'Expand Sidebar' : 'Collapse Sidebar'}
+              style={{
+                background: 'rgba(255, 255, 255, 0.06)',
+                border: '1px solid rgba(255, 255, 255, 0.1)',
+                borderRadius: '6px',
+                color: '#94A3B8',
+                width: '26px',
+                height: '26px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                cursor: 'pointer',
+                transition: 'background-color 0.15s, color 0.15s',
+                padding: 0
+              }}
+              onMouseOver={(e) => {
+                e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.12)';
+                e.currentTarget.style.color = '#FFFFFF';
+              }}
+              onMouseOut={(e) => {
+                e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.06)';
+                e.currentTarget.style.color = '#94A3B8';
+              }}
+            >
+              {isCollapsed ? <ChevronRight size={15} /> : <ChevronLeft size={15} />}
+            </button>
+          </div>
+
+          {/* Navigation Links List (Non-scrollable) */}
+          <nav
+            style={{
+              padding: isCollapsed ? '6px 8px' : '6px 14px',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '6px',
+              overflow: 'hidden'
+            }}
+          >
+            {navLinks.map((item) => {
+              const Icon = item.icon;
+              return (
+                <NavLink
+                  key={item.to}
+                  to={item.to}
+                  title={isCollapsed ? item.label : undefined}
+                  onClick={() => onClose && onClose()}
+                  style={({ isActive }) => ({
+                    borderRadius: '10px',
+                    padding: isCollapsed ? '11px 0' : '11px 16px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: isCollapsed ? 'center' : 'flex-start',
+                    gap: isCollapsed ? 0 : '12px',
+                    fontSize: '13.5px',
+                    fontWeight: isActive ? 600 : 500,
+                    backgroundColor: isActive ? '#2563EB' : 'transparent',
+                    color: isActive ? '#FFFFFF' : '#94A3B8',
+                    textDecoration: 'none',
+                    transition: 'background-color 0.15s, color 0.15s',
+                    width: '100%',
+                    boxSizing: 'border-box'
+                  })}
+                >
+                  <Icon size={isCollapsed ? 19 : 17} style={{ flexShrink: 0 }} />
+                  {!isCollapsed && <span>{item.label}</span>}
+                </NavLink>
+              );
+            })}
+          </nav>
         </div>
 
-        <div style={{ padding: '12px 14px', borderBottom: '1px solid #2B3856', display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <span style={{
-            backgroundColor: '#3B5BDB',
-            color: '#FFFFFF',
-            fontSize: '11px',
-            fontWeight: 700,
-            padding: '2px 8px',
-            borderRadius: '3px',
-            textTransform: 'uppercase',
-            letterSpacing: '0.5px'
-          }}>
-            {user.role}
-          </span>
-          <span style={{ fontSize: '12px', color: '#E2E8F0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-            {user.username}
-          </span>
-        </div>
-
-        <nav className="sidebar-nav">
-          {navLinks.map((item) => {
-            const Icon = item.icon;
-            return (
-              <NavLink
-                key={item.to}
-                to={item.to}
-                onClick={() => onClose && onClose()}
-                className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}
-              >
-                <Icon size={16} />
-                <span>{item.label}</span>
-              </NavLink>
-            );
-          })}
-        </nav>
-
-        <div className="sidebar-footer" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+        {/* Footer Actions Section */}
+        <div
+          style={{
+            padding: isCollapsed ? '14px 8px' : '16px 18px',
+            borderTop: '1px solid rgba(255, 255, 255, 0.05)',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '10px',
+            flexShrink: 0
+          }}
+        >
           <button
             onClick={() => setShowIssueModal(true)}
+            title={isCollapsed ? 'Report Issue / Bug' : undefined}
             style={{
               width: '100%',
               display: 'flex',
               alignItems: 'center',
-              gap: '8px',
-              backgroundColor: 'transparent',
-              border: '1px solid #475569',
+              justifyContent: isCollapsed ? 'center' : 'flex-start',
+              gap: isCollapsed ? 0 : '10px',
+              backgroundColor: 'rgba(239, 68, 68, 0.08)',
+              border: '1px solid rgba(239, 68, 68, 0.35)',
               color: '#F87171',
-              padding: '6px 12px',
-              borderRadius: '4px',
+              padding: isCollapsed ? '10px 0' : '10px 14px',
+              borderRadius: '10px',
               cursor: 'pointer',
-              fontSize: '12.5px'
+              fontSize: '13px',
+              fontWeight: 500,
+              transition: 'background-color 0.15s'
             }}
           >
-            <AlertCircle size={14} />
-            <span>Report Issue / Bug</span>
+            <AlertCircle size={isCollapsed ? 17 : 15} style={{ flexShrink: 0 }} />
+            {!isCollapsed && <span>Report Issue / Bug</span>}
           </button>
 
           <button
             onClick={handleLogout}
+            title={isCollapsed ? 'Sign Out' : undefined}
             style={{
               width: '100%',
               display: 'flex',
               alignItems: 'center',
-              gap: '8px',
-              backgroundColor: 'transparent',
-              border: '1px solid #334155',
+              justifyContent: isCollapsed ? 'center' : 'flex-start',
+              gap: isCollapsed ? 0 : '10px',
+              backgroundColor: 'rgba(255, 255, 255, 0.03)',
+              border: '1px solid rgba(255, 255, 255, 0.08)',
               color: '#CBD5E1',
-              padding: '8px 12px',
-              borderRadius: '4px',
+              padding: isCollapsed ? '10px 0' : '10px 14px',
+              borderRadius: '10px',
               cursor: 'pointer',
-              fontSize: '13px'
+              fontSize: '13px',
+              fontWeight: 500,
+              transition: 'background-color 0.15s'
             }}
           >
-            <LogOut size={15} />
-            <span>Sign Out</span>
+            <LogOut size={isCollapsed ? 17 : 15} style={{ flexShrink: 0 }} />
+            {!isCollapsed && <span>Sign Out</span>}
           </button>
         </div>
       </aside>

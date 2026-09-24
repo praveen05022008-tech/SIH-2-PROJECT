@@ -40,7 +40,6 @@ import { StudentLearningPage as FacultyLearningPage } from './pages/student/Stud
 import { IndustryDashboard } from './pages/industry/IndustryDashboard';
 import { IndustryProfilePage } from './pages/industry/IndustryProfilePage';
 import { PostOpportunityPage } from './pages/industry/PostOpportunityPage';
-import { MyOpportunitiesPage } from './pages/industry/MyOpportunitiesPage';
 import { IndustryApplicationsPage } from './pages/industry/IndustryApplicationsPage';
 import { IndustryMentorshipPage } from './pages/industry/IndustryMentorshipPage';
 import { IndustryCollaborationsPage } from './pages/industry/IndustryCollaborationsPage';
@@ -70,7 +69,8 @@ export default function App() {
           <Routes>
 
           {/* Public Routes */}
-          <Route path="/" element={<LandingPage />} />
+          <Route path="/" element={<LoginPage />} />
+          <Route path="/landing" element={<LandingPage />} />
           <Route path="/about" element={<AboutPage />} />
           <Route path="/features" element={<FeaturesPage />} />
           <Route path="/how-it-works" element={<HowItWorksPage />} />
@@ -104,7 +104,6 @@ export default function App() {
           <Route path="/industry/dashboard" element={<IndustryDashboard />} />
           <Route path="/industry/profile" element={<IndustryProfilePage />} />
           <Route path="/industry/post-opportunity" element={<PostOpportunityPage />} />
-          <Route path="/industry/my-opportunities" element={<MyOpportunitiesPage />} />
           <Route path="/industry/applications" element={<IndustryApplicationsPage />} />
           <Route path="/industry/mentorship" element={<IndustryMentorshipPage />} />
           <Route path="/industry/collaborations" element={<IndustryCollaborationsPage />} />
@@ -125,7 +124,7 @@ export default function App() {
           <Route path="/admin/issues" element={<AdminIssuesPage />} />
           <Route path="/admin/skills" element={<AdminSkillsPage />} />
           <Route path="/admin/assessments" element={<AdminAssessmentsPage />} />
-          <Route path="/admin/opportunities" element={<MyOpportunitiesPage />} />
+          <Route path="/admin/opportunities" element={<StudentOpportunitiesPage />} />
           <Route path="/admin/audit-logs" element={<AdminAuditLogsPage />} />
           <Route path="/admin/settings" element={<AdminSettingsPage />} />
 

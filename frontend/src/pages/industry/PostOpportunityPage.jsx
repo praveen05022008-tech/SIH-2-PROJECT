@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../../services/api';
 import { PortalLayout } from '../../components/layout/PortalLayout';
-import { Plus, Trash2, Send } from 'lucide-react';
+import { Plus, Trash2, ChevronDown } from 'lucide-react';
 
 export function PostOpportunityPage() {
   const [formData, setFormData] = useState({
@@ -79,7 +79,7 @@ export function PostOpportunityPage() {
     try {
       await api.post('/opportunities', payload);
       setMsg({ type: 'success', text: 'Opportunity published successfully!' });
-      setTimeout(() => navigate('/industry/my-opportunities'), 1200);
+      setTimeout(() => navigate('/industry/dashboard'), 1200);
     } catch (err) {
       setMsg({ type: 'error', text: err.message || 'Failed to post opportunity.' });
     } finally {
@@ -87,212 +87,556 @@ export function PostOpportunityPage() {
     }
   };
 
+  const inputStyle = {
+    width: '100%',
+    height: '46px',
+    padding: '0 14px',
+    borderRadius: '8px',
+    border: '1px solid #E2E8F0',
+    fontSize: '14px',
+    color: '#0F172A',
+    backgroundColor: '#FFFFFF',
+    outline: 'none',
+    boxSizing: 'border-box',
+    transition: 'border-color 0.15s, box-shadow 0.15s'
+  };
+
+  const textareaStyle = {
+    width: '100%',
+    padding: '12px 14px',
+    borderRadius: '8px',
+    border: '1px solid #E2E8F0',
+    fontSize: '14px',
+    color: '#0F172A',
+    backgroundColor: '#FFFFFF',
+    outline: 'none',
+    boxSizing: 'border-box',
+    fontFamily: 'inherit',
+    resize: 'vertical',
+    transition: 'border-color 0.15s, box-shadow 0.15s'
+  };
+
+  const labelStyle = {
+    display: 'block',
+    fontSize: '13.5px',
+    fontWeight: 600,
+    color: '#0F172A',
+    marginBottom: '8px'
+  };
+
   return (
     <PortalLayout title="Post New Opportunity" allowedRoles={['industry']}>
-      <div className="card" style={{ maxWidth: '840px' }}>
-        <div className="card-header">
-          <h3 className="card-title">Opportunity Details & Competency Requirements</h3>
-        </div>
+      {/* Subtitle Under Page Title */}
+      <div style={{ marginTop: '-12px', marginBottom: '22px', fontSize: '13px', color: '#64748B' }}>
+        Create a new job or internship opening to attract suitable candidates
+      </div>
 
+      {/* ─── Top Banner Header Card with Soft Blue Gradient ─── */}
+      <div
+        style={{
+          background: 'linear-gradient(90deg, #E6F0FE 0%, #DCEAFC 40%, #D4E5FB 100%)',
+          borderRadius: '16px',
+          border: '1px solid #BFDBFE',
+          borderLeft: '4px solid #2563EB',
+          padding: 'clamp(20px, 3.5vw, 26px) clamp(24px, 4vw, 36px)',
+          boxShadow: '0 4px 20px rgba(37, 99, 235, 0.05), 0 1px 3px rgba(0, 0, 0, 0.02)',
+          position: 'relative',
+          overflow: 'hidden',
+          marginBottom: '20px'
+        }}
+      >
+        <h2
+          style={{
+            fontSize: '20px',
+            fontWeight: 800,
+            color: '#0F172A',
+            letterSpacing: '-0.3px',
+            margin: '0 0 6px 0'
+          }}
+        >
+          Opportunity Details & Competency Requirements
+        </h2>
+        <p
+          style={{
+            fontSize: '13.5px',
+            color: '#475569',
+            margin: 0
+          }}
+        >
+          Provide complete details to publish your job or internship opportunity.
+        </p>
+      </div>
+
+      {/* ─── Form Container Card ─── */}
+      <div
+        style={{
+          backgroundColor: '#FFFFFF',
+          borderRadius: '16px',
+          border: '1px solid #E2E8F0',
+          padding: 'clamp(24px, 4vw, 36px)',
+          boxShadow: '0 4px 20px rgba(0, 0, 0, 0.02)'
+        }}
+      >
         {msg.text && (
-          <div style={{
-            padding: '10px 14px',
-            borderRadius: '4px',
-            marginBottom: '16px',
-            fontSize: '13px',
-            backgroundColor: msg.type === 'success' ? '#DEF7EC' : '#FEE2E2',
-            color: msg.type === 'success' ? '#166534' : '#991B1B',
-            border: `1px solid ${msg.type === 'success' ? '#86EFAC' : '#FCA5A5'}`
-          }}>
+          <div
+            style={{
+              padding: '12px 16px',
+              borderRadius: '8px',
+              marginBottom: '24px',
+              fontSize: '13.5px',
+              fontWeight: 500,
+              backgroundColor: msg.type === 'success' ? '#ECFDF5' : '#FEF2F2',
+              color: msg.type === 'success' ? '#065F46' : '#991B1B',
+              border: `1px solid ${msg.type === 'success' ? '#A7F3D0' : '#FCA5A5'}`
+            }}
+          >
             {msg.text}
           </div>
         )}
 
         <form onSubmit={handleSubmit}>
-          <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '16px' }}>
-            <div className="form-group">
-              <label className="form-label">Position Title *</label>
+          {/* Row 1: Position Title & Opportunity Type */}
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 340px), 1fr))',
+              gap: '20px',
+              marginBottom: '22px'
+            }}
+          >
+            <div style={{ flex: 1.5 }}>
+              <label style={labelStyle}>Position Title *</label>
               <input
                 type="text"
-                className="form-control"
                 placeholder="e.g. Clinical Data Science Intern"
                 value={formData.title}
                 onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                 required
+                style={inputStyle}
+                onFocus={(e) => {
+                  e.target.style.borderColor = '#2563EB';
+                  e.target.style.boxShadow = '0 0 0 3px rgba(37, 99, 235, 0.12)';
+                }}
+                onBlur={(e) => {
+                  e.target.style.borderColor = '#E2E8F0';
+                  e.target.style.boxShadow = 'none';
+                }}
               />
             </div>
 
-            <div className="form-group">
-              <label className="form-label">Opportunity Type *</label>
-              <select
-                className="form-control"
-                value={formData.type}
-                onChange={(e) => setFormData({ ...formData, type: e.target.value })}
-              >
-                <option value="internship">Internship</option>
-                <option value="job">Entry-level Job</option>
-                <option value="apprenticeship">Apprenticeship</option>
-                <option value="live_project">Live Project</option>
-                <option value="faculty_internship">Faculty Internship / Sabbatical</option>
-                <option value="industrial_training">Industrial Training</option>
-              </select>
+            <div style={{ flex: 1 }}>
+              <label style={labelStyle}>Opportunity Type *</label>
+              <div style={{ position: 'relative' }}>
+                <select
+                  value={formData.type}
+                  onChange={(e) => setFormData({ ...formData, type: e.target.value })}
+                  style={{
+                    ...inputStyle,
+                    appearance: 'none',
+                    paddingRight: '36px',
+                    cursor: 'pointer'
+                  }}
+                  onFocus={(e) => {
+                    e.target.style.borderColor = '#2563EB';
+                    e.target.style.boxShadow = '0 0 0 3px rgba(37, 99, 235, 0.12)';
+                  }}
+                  onBlur={(e) => {
+                    e.target.style.borderColor = '#E2E8F0';
+                    e.target.style.boxShadow = 'none';
+                  }}
+                >
+                  <option value="internship">Internship</option>
+                  <option value="job">Full-time Job</option>
+                  <option value="apprenticeship">Apprenticeship</option>
+                  <option value="live_project">Project / Research</option>
+                  <option value="faculty_internship">Faculty Internship / Sabbatical</option>
+                  <option value="industrial_training">Industrial Training</option>
+                </select>
+                <ChevronDown
+                  size={17}
+                  style={{
+                    position: 'absolute',
+                    right: '12px',
+                    top: '15px',
+                    color: '#64748B',
+                    pointerEvents: 'none'
+                  }}
+                />
+              </div>
             </div>
           </div>
 
-          <div className="form-group">
-            <label className="form-label">Role Description *</label>
+          {/* Row 2: Role Description */}
+          <div style={{ marginBottom: '22px' }}>
+            <label style={labelStyle}>Role Description *</label>
             <textarea
-              className="form-control"
-              rows={3}
+              rows={4}
               placeholder="Provide a comprehensive summary of this opening..."
               value={formData.description}
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
               required
+              style={textareaStyle}
+              onFocus={(e) => {
+                e.target.style.borderColor = '#2563EB';
+                e.target.style.boxShadow = '0 0 0 3px rgba(37, 99, 235, 0.12)';
+              }}
+              onBlur={(e) => {
+                e.target.style.borderColor = '#E2E8F0';
+                e.target.style.boxShadow = 'none';
+              }}
             />
           </div>
 
-          <div className="form-group">
-            <label className="form-label">Core Responsibilities</label>
+          {/* Row 3: Core Responsibilities */}
+          <div style={{ marginBottom: '22px' }}>
+            <label style={labelStyle}>Core Responsibilities</label>
             <textarea
-              className="form-control"
-              rows={2}
+              rows={3}
               placeholder="Outline daily duties and milestone expectations..."
               value={formData.responsibilities}
               onChange={(e) => setFormData({ ...formData, responsibilities: e.target.value })}
+              style={textareaStyle}
+              onFocus={(e) => {
+                e.target.style.borderColor = '#2563EB';
+                e.target.style.boxShadow = '0 0 0 3px rgba(37, 99, 235, 0.12)';
+              }}
+              onBlur={(e) => {
+                e.target.style.borderColor = '#E2E8F0';
+                e.target.style.boxShadow = 'none';
+              }}
             />
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px' }}>
-            <div className="form-group">
-              <label className="form-label">Location *</label>
+          {/* Row 4: Location, Work Mode, Openings */}
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 220px), 1fr))',
+              gap: '20px',
+              marginBottom: '22px'
+            }}
+          >
+            <div>
+              <label style={labelStyle}>Location *</label>
               <input
                 type="text"
-                className="form-control"
                 placeholder="e.g. New Delhi / Hybrid"
                 value={formData.location}
                 onChange={(e) => setFormData({ ...formData, location: e.target.value })}
                 required
+                style={inputStyle}
+                onFocus={(e) => {
+                  e.target.style.borderColor = '#2563EB';
+                  e.target.style.boxShadow = '0 0 0 3px rgba(37, 99, 235, 0.12)';
+                }}
+                onBlur={(e) => {
+                  e.target.style.borderColor = '#E2E8F0';
+                  e.target.style.boxShadow = 'none';
+                }}
               />
             </div>
 
-            <div className="form-group">
-              <label className="form-label">Work Mode</label>
-              <select
-                className="form-control"
-                value={formData.work_mode}
-                onChange={(e) => setFormData({ ...formData, work_mode: e.target.value })}
-              >
-                <option value="remote">Remote</option>
-                <option value="on-site">On-Site</option>
-                <option value="hybrid">Hybrid</option>
-              </select>
+            <div>
+              <label style={labelStyle}>Work Mode</label>
+              <div style={{ position: 'relative' }}>
+                <select
+                  value={formData.work_mode}
+                  onChange={(e) => setFormData({ ...formData, work_mode: e.target.value })}
+                  style={{
+                    ...inputStyle,
+                    appearance: 'none',
+                    paddingRight: '36px',
+                    cursor: 'pointer'
+                  }}
+                  onFocus={(e) => {
+                    e.target.style.borderColor = '#2563EB';
+                    e.target.style.boxShadow = '0 0 0 3px rgba(37, 99, 235, 0.12)';
+                  }}
+                  onBlur={(e) => {
+                    e.target.style.borderColor = '#E2E8F0';
+                    e.target.style.boxShadow = 'none';
+                  }}
+                >
+                  <option value="remote">Remote</option>
+                  <option value="on-site">On-Site</option>
+                  <option value="hybrid">Hybrid</option>
+                </select>
+                <ChevronDown
+                  size={17}
+                  style={{
+                    position: 'absolute',
+                    right: '12px',
+                    top: '15px',
+                    color: '#64748B',
+                    pointerEvents: 'none'
+                  }}
+                />
+              </div>
             </div>
 
-            <div className="form-group">
-              <label className="form-label">Number of Openings</label>
+            <div>
+              <label style={labelStyle}>Number of Openings</label>
               <input
                 type="number"
                 min="1"
-                className="form-control"
                 value={formData.openings_count}
                 onChange={(e) => setFormData({ ...formData, openings_count: e.target.value })}
+                style={inputStyle}
+                onFocus={(e) => {
+                  e.target.style.borderColor = '#2563EB';
+                  e.target.style.boxShadow = '0 0 0 3px rgba(37, 99, 235, 0.12)';
+                }}
+                onBlur={(e) => {
+                  e.target.style.borderColor = '#E2E8F0';
+                  e.target.style.boxShadow = 'none';
+                }}
               />
             </div>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px' }}>
-            <div className="form-group">
-              <label className="form-label">Duration</label>
+          {/* Row 5: Duration, Stipend, CGPA */}
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 220px), 1fr))',
+              gap: '20px',
+              marginBottom: '26px'
+            }}
+          >
+            <div>
+              <label style={labelStyle}>Duration</label>
               <input
                 type="text"
-                className="form-control"
+                placeholder="3 Months"
                 value={formData.duration}
                 onChange={(e) => setFormData({ ...formData, duration: e.target.value })}
+                style={inputStyle}
+                onFocus={(e) => {
+                  e.target.style.borderColor = '#2563EB';
+                  e.target.style.boxShadow = '0 0 0 3px rgba(37, 99, 235, 0.12)';
+                }}
+                onBlur={(e) => {
+                  e.target.style.borderColor = '#E2E8F0';
+                  e.target.style.boxShadow = 'none';
+                }}
               />
             </div>
 
-            <div className="form-group">
-              <label className="form-label">Stipend / Salary Offer</label>
+            <div>
+              <label style={labelStyle}>Stipend / Salary Offer</label>
               <input
                 type="text"
-                className="form-control"
+                placeholder="Rs. 20,000 / month"
                 value={formData.stipend_salary}
                 onChange={(e) => setFormData({ ...formData, stipend_salary: e.target.value })}
+                style={inputStyle}
+                onFocus={(e) => {
+                  e.target.style.borderColor = '#2563EB';
+                  e.target.style.boxShadow = '0 0 0 3px rgba(37, 99, 235, 0.12)';
+                }}
+                onBlur={(e) => {
+                  e.target.style.borderColor = '#E2E8F0';
+                  e.target.style.boxShadow = 'none';
+                }}
               />
             </div>
 
-            <div className="form-group">
-              <label className="form-label">Min Eligibility CGPA</label>
+            <div>
+              <label style={labelStyle}>Min Eligibility CGPA</label>
               <input
                 type="number"
                 step="0.1"
                 min="0"
                 max="10"
-                className="form-control"
                 value={formData.eligibility_cgpa}
                 onChange={(e) => setFormData({ ...formData, eligibility_cgpa: e.target.value })}
+                style={inputStyle}
+                onFocus={(e) => {
+                  e.target.style.borderColor = '#2563EB';
+                  e.target.style.boxShadow = '0 0 0 3px rgba(37, 99, 235, 0.12)';
+                }}
+                onBlur={(e) => {
+                  e.target.style.borderColor = '#E2E8F0';
+                  e.target.style.boxShadow = 'none';
+                }}
               />
             </div>
           </div>
 
-          {/* Tag Required Skills */}
-          <div style={{ marginTop: '16px', borderTop: '1px solid #E2E5EA', paddingTop: '16px' }}>
-            <label className="form-label">Tag Required Technical / Domain Skills</label>
-            <div style={{ display: 'flex', gap: '10px', marginBottom: '12px' }}>
-              <select
-                className="form-control"
-                value={currSkillId}
-                onChange={(e) => setCurrSkillId(e.target.value)}
-                style={{ flex: 1 }}
-              >
-                <option value="">-- Choose Skill from Catalog --</option>
-                {skillsList.map((s) => (
-                  <option key={s.id} value={s.id}>{s.name}</option>
-                ))}
-              </select>
+          {/* Row 6: Tag Required Skills */}
+          <div style={{ marginBottom: '26px' }}>
+            <label style={labelStyle}>Tag Required Technical / Domain Skills</label>
+            <div
+              style={{
+                display: 'flex',
+                gap: '12px',
+                flexWrap: 'wrap',
+                alignItems: 'center',
+                marginBottom: '12px'
+              }}
+            >
+              <div style={{ flex: '2 1 240px', position: 'relative' }}>
+                <select
+                  value={currSkillId}
+                  onChange={(e) => setCurrSkillId(e.target.value)}
+                  style={{
+                    ...inputStyle,
+                    appearance: 'none',
+                    paddingRight: '36px',
+                    cursor: 'pointer'
+                  }}
+                  onFocus={(e) => {
+                    e.target.style.borderColor = '#2563EB';
+                    e.target.style.boxShadow = '0 0 0 3px rgba(37, 99, 235, 0.12)';
+                  }}
+                  onBlur={(e) => {
+                    e.target.style.borderColor = '#E2E8F0';
+                    e.target.style.boxShadow = 'none';
+                  }}
+                >
+                  <option value="">-- Choose Skill from Catalog --</option>
+                  {skillsList.map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.name}
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown
+                  size={17}
+                  style={{
+                    position: 'absolute',
+                    right: '12px',
+                    top: '15px',
+                    color: '#64748B',
+                    pointerEvents: 'none'
+                  }}
+                />
+              </div>
 
-              <select
-                className="form-control"
-                value={currLevel}
-                onChange={(e) => setCurrLevel(e.target.value)}
-                style={{ width: '160px' }}
-              >
-                <option value="beginner">Beginner</option>
-                <option value="intermediate">Intermediate</option>
-                <option value="advanced">Advanced</option>
-                <option value="expert">Expert</option>
-              </select>
+              <div style={{ flex: '1 1 150px', position: 'relative' }}>
+                <select
+                  value={currLevel}
+                  onChange={(e) => setCurrLevel(e.target.value)}
+                  style={{
+                    ...inputStyle,
+                    appearance: 'none',
+                    paddingRight: '36px',
+                    cursor: 'pointer'
+                  }}
+                  onFocus={(e) => {
+                    e.target.style.borderColor = '#2563EB';
+                    e.target.style.boxShadow = '0 0 0 3px rgba(37, 99, 235, 0.12)';
+                  }}
+                  onBlur={(e) => {
+                    e.target.style.borderColor = '#E2E8F0';
+                    e.target.style.boxShadow = 'none';
+                  }}
+                >
+                  <option value="beginner">Beginner</option>
+                  <option value="intermediate">Intermediate</option>
+                  <option value="advanced">Advanced</option>
+                  <option value="expert">Expert</option>
+                </select>
+                <ChevronDown
+                  size={17}
+                  style={{
+                    position: 'absolute',
+                    right: '12px',
+                    top: '15px',
+                    color: '#64748B',
+                    pointerEvents: 'none'
+                  }}
+                />
+              </div>
 
-              <button type="button" onClick={handleAddSkill} className="btn btn-outline btn-sm">
-                <Plus size={14} /> Add Skill
+              <button
+                type="button"
+                onClick={handleAddSkill}
+                style={{
+                  height: '46px',
+                  padding: '0 20px',
+                  backgroundColor: '#EFF6FF',
+                  border: '1px solid #BFDBFE',
+                  color: '#2563EB',
+                  borderRadius: '8px',
+                  fontSize: '13.5px',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  transition: 'background-color 0.15s, border-color 0.15s'
+                }}
+                onMouseOver={(e) => {
+                  e.currentTarget.style.backgroundColor = '#DBEAFE';
+                }}
+                onMouseOut={(e) => {
+                  e.currentTarget.style.backgroundColor = '#EFF6FF';
+                }}
+              >
+                <Plus size={16} /> Add Skill
               </button>
             </div>
 
             {selectedSkills.length > 0 && (
-              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '16px' }}>
+              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginTop: '12px' }}>
                 {selectedSkills.map((sk) => (
-                  <span key={sk.skill_id} style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '6px',
-                    padding: '4px 10px',
-                    backgroundColor: '#EEF2FF',
-                    border: '1px solid #C7D2FE',
-                    color: '#3730A3',
-                    borderRadius: '4px',
-                    fontSize: '12.5px'
-                  }}>
-                    <strong>{sk.skill_name}</strong> ({sk.minimum_level})
-                    <Trash2 size={13} style={{ cursor: 'pointer', color: '#EF4444' }} onClick={() => handleRemoveSkill(sk.skill_id)} />
+                  <span
+                    key={sk.skill_id}
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      padding: '6px 12px',
+                      backgroundColor: '#EEF2FF',
+                      border: '1px solid #C7D2FE',
+                      color: '#3730A3',
+                      borderRadius: '8px',
+                      fontSize: '13px',
+                      fontWeight: 600
+                    }}
+                  >
+                    <span>{sk.skill_name}</span>
+                    <span style={{ fontSize: '11px', color: '#6366F1', fontWeight: 500 }}>
+                      ({sk.minimum_level})
+                    </span>
+                    <Trash2
+                      size={14}
+                      style={{ cursor: 'pointer', color: '#EF4444', marginLeft: '2px' }}
+                      onClick={() => handleRemoveSkill(sk.skill_id)}
+                      title="Remove skill"
+                    />
                   </span>
                 ))}
               </div>
             )}
           </div>
 
-          <div style={{ marginTop: '20px' }}>
-            <button type="submit" className="btn btn-primary" disabled={submitting}>
-              <Send size={14} /> {submitting ? 'Publishing Opportunity...' : 'Publish Opportunity'}
+          {/* Submit Button */}
+          <div>
+            <button
+              type="submit"
+              disabled={submitting}
+              style={{
+                backgroundColor: '#2563EB',
+                color: '#FFFFFF',
+                padding: '13px 28px',
+                borderRadius: '8px',
+                fontSize: '14px',
+                fontWeight: 600,
+                border: 'none',
+                cursor: submitting ? 'not-allowed' : 'pointer',
+                boxShadow: '0 2px 8px rgba(37, 99, 235, 0.28)',
+                transition: 'background-color 0.15s'
+              }}
+              onMouseOver={(e) => {
+                if (!submitting) e.currentTarget.style.backgroundColor = '#1D4ED8';
+              }}
+              onMouseOut={(e) => {
+                if (!submitting) e.currentTarget.style.backgroundColor = '#2563EB';
+              }}
+            >
+              {submitting ? 'Publishing Opportunity...' : 'Publish Opportunity'}
             </button>
           </div>
         </form>

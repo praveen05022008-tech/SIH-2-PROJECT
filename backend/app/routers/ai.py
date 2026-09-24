@@ -5,7 +5,9 @@ from typing import Any, Dict, List, Optional
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
+
 from app.core.deps import get_current_user, require_role
+
 try:
     from app.agents import create_candidate_matching_graph, create_skill_intelligence_graph
 except Exception:
@@ -325,7 +327,7 @@ def api_career_counselor(
     student = db.query(StudentProfile).filter(StudentProfile.user_id == current_user.id).first()
     dept_name = "General"
     if student:
-        if student.department and hasattr(student.department, 'name'):
+        if student.department and hasattr(student.department, "name"):
             dept_name = student.department.name
         elif student.course:
             dept_name = student.course

@@ -24,6 +24,7 @@ def _get_groq_client():
         return None
     try:
         from groq import Groq
+
         return Groq(api_key=api_key)
     except Exception as e:
         logger.warning(f"Unable to initialize Groq client: {e}")
@@ -128,7 +129,9 @@ def _call_ai(messages: List[Dict[str, str]], json_mode: bool = False, temperatur
         try:
             res = _call_ollama(messages, json_mode=json_mode, temperature=temperature)
             if res and res.strip():
-                logger.info(f"[AI_SERVICE: OLLAMA] Inferred response using {getattr(settings, 'OLLAMA_MODEL', 'local')}")
+                logger.info(
+                    f"[AI_SERVICE: OLLAMA] Inferred response using {getattr(settings, 'OLLAMA_MODEL', 'local')}"
+                )
                 return res
         except Exception as e:
             logger.warning(
@@ -149,10 +152,7 @@ def _call_ai(messages: List[Dict[str, str]], json_mode: bool = False, temperatur
 
 
 def _fallback_skill_gap_roadmap(
-    student_name: str,
-    target_role: str,
-    current_skills: List[Dict[str, Any]],
-    interests: Optional[str] = None
+    student_name: str, target_role: str, current_skills: List[Dict[str, Any]], interests: Optional[str] = None
 ) -> Dict[str, Any]:
     known_skills = [s.get("name", str(s)) for s in current_skills if isinstance(s, dict)]
     role_lower = target_role.lower()
@@ -161,62 +161,88 @@ def _fallback_skill_gap_roadmap(
     if "data" in role_lower or "ai" in role_lower or "machine" in role_lower:
         recommended_skills = ["PyTorch", "Model Evaluation & Tuning", "MLOps Pipelines", "Data Validation"]
     elif "frontend" in role_lower or "web" in role_lower:
-        recommended_skills = ["State Management (Zustand/Redux)", "Performance Optimization", "Accessibility (a11y)", "Testing (Vitest/Playwright)"]
+        recommended_skills = [
+            "State Management (Zustand/Redux)",
+            "Performance Optimization",
+            "Accessibility (a11y)",
+            "Testing (Vitest/Playwright)",
+        ]
     elif "cloud" in role_lower or "devops" in role_lower:
-        recommended_skills = ["Docker & Kubernetes", "Terraform / IaC", "AWS / Cloud Infrastructure", "Monitoring (Prometheus/Grafana)"]
+        recommended_skills = [
+            "Docker & Kubernetes",
+            "Terraform / IaC",
+            "AWS / Cloud Infrastructure",
+            "Monitoring (Prometheus/Grafana)",
+        ]
     else:
-        recommended_skills = ["FastAPI / Distributed Microservices", "Relational & NoSQL Databases", "Redis Caching", "Security & JWT"]
+        recommended_skills = [
+            "FastAPI / Distributed Microservices",
+            "Relational & NoSQL Databases",
+            "Redis Caching",
+            "Security & JWT",
+        ]
 
     score = min(85, max(45, len(known_skills) * 15 + 35))
 
     return {
         "summary": f"Skill alignment analysis for {student_name or 'Candidate'} targeting the '{target_role}' role indicates strong fundamental readiness ({score}%). Focus on production tooling and architectural depth will close the remaining gaps.",
         "overall_readiness_score": score,
-        "strengths": known_skills if known_skills else ["Core Computer Science Fundamentals", "Problem Solving", "Adaptability"],
+        "strengths": (
+            known_skills if known_skills else ["Core Computer Science Fundamentals", "Problem Solving", "Adaptability"]
+        ),
         "critical_gaps": [
-            {
-                "skill": sk,
-                "current_level": "Beginner",
-                "target_level": "Intermediate / Advanced",
-                "importance": "High"
-            }
+            {"skill": sk, "current_level": "Beginner", "target_level": "Intermediate / Advanced", "importance": "High"}
             for sk in recommended_skills[:3]
         ],
         "four_week_roadmap": [
             {
                 "week": 1,
                 "focus_theme": "Core Competency Reinforcement",
-                "action_items": [f"Deep dive into {recommended_skills[0]} design patterns", "Read official documentation and architectural best practices"],
+                "action_items": [
+                    f"Deep dive into {recommended_skills[0]} design patterns",
+                    "Read official documentation and architectural best practices",
+                ],
                 "recommended_projects": ["Build a small proof-of-concept module"],
-                "estimated_hours": 12
+                "estimated_hours": 12,
             },
             {
                 "week": 2,
                 "focus_theme": "Advanced Implementation & Testing",
-                "action_items": [f"Implement practical applications of {recommended_skills[1]}", "Write automated unit and integration tests"],
+                "action_items": [
+                    f"Implement practical applications of {recommended_skills[1]}",
+                    "Write automated unit and integration tests",
+                ],
                 "recommended_projects": ["Integrate modular testing suite"],
-                "estimated_hours": 14
+                "estimated_hours": 14,
             },
             {
                 "week": 3,
                 "focus_theme": "System Architecture & Integration",
-                "action_items": [f"Explore {recommended_skills[2]} integration", "Optimize throughput and query performance"],
+                "action_items": [
+                    f"Explore {recommended_skills[2]} integration",
+                    "Optimize throughput and query performance",
+                ],
                 "recommended_projects": ["Deploy containerized service on local or cloud host"],
-                "estimated_hours": 15
+                "estimated_hours": 15,
             },
             {
                 "week": 4,
                 "focus_theme": "Production Readiness & Portfolio Showcase",
-                "action_items": ["Document architecture in README with system diagram", "Conduct mock technical interview sessions"],
+                "action_items": [
+                    "Document architecture in README with system diagram",
+                    "Conduct mock technical interview sessions",
+                ],
                 "recommended_projects": [f"Publish end-to-end {target_role} capstone repository"],
-                "estimated_hours": 10
-            }
+                "estimated_hours": 10,
+            },
         ],
-        "industry_advice": f"Industries hiring for {target_role} value hands-on system building and problem solving. Demonstrating real projects with measurable outcomes is the most impactful differentiator."
+        "industry_advice": f"Industries hiring for {target_role} value hands-on system building and problem solving. Demonstrating real projects with measurable outcomes is the most impactful differentiator.",
     }
 
 
-def _fallback_assessment_quiz(skill_name: str, difficulty: str = "intermediate", num_questions: int = 5) -> Dict[str, Any]:
+def _fallback_assessment_quiz(
+    skill_name: str, difficulty: str = "intermediate", num_questions: int = 5
+) -> Dict[str, Any]:
     default_qs = [
         {
             "question_text": f"Which of the following is a recognized best practice when working with {skill_name} in production?",
@@ -225,12 +251,12 @@ def _fallback_assessment_quiz(skill_name: str, difficulty: str = "intermediate",
                 "Strict type validation and defensive error handling",
                 "Hardcoding configuration credentials directly in code",
                 "Disabling logging and monitoring to maximize speed",
-                "Skipping automated testing during releases"
+                "Skipping automated testing during releases",
             ],
             "correct_answer": "Strict type validation and defensive error handling",
             "marks": 1,
             "difficulty": difficulty,
-            "explanation": "Validating inputs and handling errors defensively prevents unhandled runtime exceptions and security issues."
+            "explanation": "Validating inputs and handling errors defensively prevents unhandled runtime exceptions and security issues.",
         },
         {
             "question_text": f"What is the primary operational advantage of modular architecture in {skill_name} applications?",
@@ -239,12 +265,12 @@ def _fallback_assessment_quiz(skill_name: str, difficulty: str = "intermediate",
                 "Separation of concerns and independent maintainability",
                 "Eliminating the need for a database",
                 "Automatic unlimited cloud scaling without configuration",
-                "Allowing all variables to be globally accessible"
+                "Allowing all variables to be globally accessible",
             ],
             "correct_answer": "Separation of concerns and independent maintainability",
             "marks": 1,
             "difficulty": difficulty,
-            "explanation": "Modularization decouples components, making code easier to test, update, and maintain."
+            "explanation": "Modularization decouples components, making code easier to test, update, and maintain.",
         },
         {
             "question_text": f"When optimizing performance in {skill_name}, which strategy is most effective?",
@@ -253,12 +279,12 @@ def _fallback_assessment_quiz(skill_name: str, difficulty: str = "intermediate",
                 "Profiling bottlenecks, caching repetitive operations, and asynchronous I/O",
                 "Running redundant compute cycles continuously",
                 "Increasing database connection pools beyond server capacity",
-                "Replacing all data structures with plain text files"
+                "Replacing all data structures with plain text files",
             ],
             "correct_answer": "Profiling bottlenecks, caching repetitive operations, and asynchronous I/O",
             "marks": 1,
             "difficulty": difficulty,
-            "explanation": "Identifying actual bottlenecks and using caching with non-blocking I/O delivers tangible efficiency gains."
+            "explanation": "Identifying actual bottlenecks and using caching with non-blocking I/O delivers tangible efficiency gains.",
         },
         {
             "question_text": f"In {skill_name}, how should sensitive environment variables and API tokens be managed?",
@@ -267,12 +293,12 @@ def _fallback_assessment_quiz(skill_name: str, difficulty: str = "intermediate",
                 "Using encrypted secret managers and environment variables (.env)",
                 "Checking them into public git version control",
                 "Embedding them directly in client-side script tags",
-                "Storing them unencrypted on shared network drives"
+                "Storing them unencrypted on shared network drives",
             ],
             "correct_answer": "Using encrypted secret managers and environment variables (.env)",
             "marks": 1,
             "difficulty": difficulty,
-            "explanation": "Secrets should always be isolated in environment configurations or managed vault stores, never committed to version control."
+            "explanation": "Secrets should always be isolated in environment configurations or managed vault stores, never committed to version control.",
         },
         {
             "question_text": f"What metric best reflects reliability when deploying {skill_name} services?",
@@ -281,23 +307,23 @@ def _fallback_assessment_quiz(skill_name: str, difficulty: str = "intermediate",
                 "Service uptime, low error rate (5xx), and p95 latency targets",
                 "The total number of lines of source code",
                 "How fast code is typed by the engineering team",
-                "The number of comments in the codebase"
+                "The number of comments in the codebase",
             ],
             "correct_answer": "Service uptime, low error rate (5xx), and p95 latency targets",
             "marks": 1,
             "difficulty": difficulty,
-            "explanation": "Production reliability is measured by availability SLOs, error budgets, and latency percentiles."
-        }
+            "explanation": "Production reliability is measured by availability SLOs, error budgets, and latency percentiles.",
+        },
     ]
 
-    selected_qs = default_qs[:min(num_questions, len(default_qs))]
+    selected_qs = default_qs[: min(num_questions, len(default_qs))]
 
     return {
         "title": f"{skill_name} Industry Competency Assessment",
         "skill": skill_name,
         "difficulty": difficulty,
         "passing_percentage": 70,
-        "questions": selected_qs
+        "questions": selected_qs,
     }
 
 
@@ -331,7 +357,11 @@ def analyze_skill_gap_and_generate_roadmap(
 
     if raw:
         parsed = _clean_and_parse_json(raw, fallback_default=None)
-        if isinstance(parsed, dict) and parsed.get("four_week_roadmap") and len(parsed.get("four_week_roadmap", [])) > 0:
+        if (
+            isinstance(parsed, dict)
+            and parsed.get("four_week_roadmap")
+            and len(parsed.get("four_week_roadmap", [])) > 0
+        ):
             return parsed
 
     return _fallback_skill_gap_roadmap(student_name, target_role, current_skills, interests)
@@ -448,7 +478,23 @@ def extract_skills_from_resume_text(resume_text: str) -> Dict[str, Any]:
             return parsed
 
     # Intelligent keyword extraction fallback
-    common_tech = ["Python", "Java", "C++", "JavaScript", "TypeScript", "React", "Node.js", "SQL", "FastAPI", "Docker", "AWS", "Git", "Machine Learning", "HTML", "CSS"]
+    common_tech = [
+        "Python",
+        "Java",
+        "C++",
+        "JavaScript",
+        "TypeScript",
+        "React",
+        "Node.js",
+        "SQL",
+        "FastAPI",
+        "Docker",
+        "AWS",
+        "Git",
+        "Machine Learning",
+        "HTML",
+        "CSS",
+    ]
     extracted_tech = [t for t in common_tech if t.lower() in resume_text.lower()]
     if not extracted_tech:
         extracted_tech = ["Python", "SQL", "Git", "REST APIs"]
@@ -458,7 +504,7 @@ def extract_skills_from_resume_text(resume_text: str) -> Dict[str, Any]:
         "soft_skills": ["Problem Solving", "Teamwork", "Agile Communication"],
         "suggested_roles": ["Software Engineer", "Full Stack Developer", "Data Analyst"],
         "experience_summary": f"Candidate profile with practical technical background across {len(extracted_tech)} identified competency domains.",
-        "portfolio_projects": ["Web Application Development", "Database Schema Design & API Implementation"]
+        "portfolio_projects": ["Web Application Development", "Database Schema Design & API Implementation"],
     }
 
 
@@ -495,13 +541,15 @@ def explain_candidate_match(candidate_profile: Dict[str, Any], opportunity_data:
 
     return {
         "match_verdict": f"{c_name} demonstrates strong alignment with {opp_title} with proven foundational skills and relevant academic background.",
-        "key_strengths": c_skills[:3] if c_skills else ["Academic Excellence", "Core Programming", "Demonstrated Learning Agility"],
+        "key_strengths": (
+            c_skills[:3] if c_skills else ["Academic Excellence", "Core Programming", "Demonstrated Learning Agility"]
+        ),
         "potential_gaps": ["Production cloud operations experience", "Large-scale distributed systems tuning"],
         "suggested_interview_questions": [
             "How have you applied your key skills in academic or live projects?",
             "Describe how you troubleshoot unexpected runtime errors in a web service.",
-            "What approach do you take to learn a new framework or technology under tight timelines?"
-        ]
+            "What approach do you take to learn a new framework or technology under tight timelines?",
+        ],
     }
 
 
@@ -546,25 +594,25 @@ def critique_resume_with_groq(resume_text: str, target_role: Optional[str] = Non
             "summary_feedback": "Resume content processed with actionable optimization suggestions.",
             "strong_points": [
                 "Solid foundational coursework and technical exposure",
-                "Clear academic timeline and project participation"
+                "Clear academic timeline and project participation",
             ],
             "quantification_fixes": [
                 {
                     "original_phrase": "Worked on web features",
                     "improved_phrase_suggestion": "Architected and delivered 4 core API modules reducing latency by 25%",
-                    "reason": "Quantifying scope and performance provides tangible evidence of engineering competence."
+                    "reason": "Quantifying scope and performance provides tangible evidence of engineering competence.",
                 }
             ],
             "weak_action_verbs_to_replace": [
                 {
                     "weak_verb": "Helped with",
                     "recommended_action_verbs": ["Implemented", "Coordinated", "Engineered"],
-                    "context": "Take active ownership verbs for project contributions"
+                    "context": "Take active ownership verbs for project contributions",
                 }
             ],
             "missing_evidence_or_skills": [
                 "Unit and integration testing coverage metrics",
-                "CI/CD deployment pipeline experience"
+                "CI/CD deployment pipeline experience",
             ],
             "tailored_role_keywords": ["REST API", "Database Optimization", "Docker", "Git Workflow", "Microservices"],
         },

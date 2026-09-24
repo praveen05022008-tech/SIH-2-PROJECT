@@ -1,18 +1,19 @@
 """Initial Setup Script - Seeds system roles, initial Super Admin, standard skill taxonomy,
 and verified demo accounts for all 5 stakeholder roles for seamless portal testing.
 """
+
 import os
 import sys
 
 # Ensure backend root is in sys.path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from app.core.security import hash_password
-from app.database import Base, SessionLocal, engine
-import app.models  # Register all models with Base metadata
-from app.models.user import Role, User, Institution, Department
-from app.models.profile import StudentProfile, FacultyProfile, IndustryProfile
-from app.models.skill import SkillCategory, Skill, StudentSkill, CareerRole, CareerRoleSkill
+import app.models  # noqa: E402
+from app.core.security import hash_password  # noqa: E402
+from app.database import Base, SessionLocal, engine  # noqa: E402
+from app.models.profile import FacultyProfile, IndustryProfile, StudentProfile  # noqa: E402
+from app.models.skill import CareerRole, CareerRoleSkill, Skill, SkillCategory, StudentSkill  # noqa: E402
+from app.models.user import Department, Institution, Role, User  # noqa: E402
 
 
 def init_db():
@@ -47,7 +48,7 @@ def init_db():
                 contact_email="registrar@aist.edu.in",
                 contact_phone="+91 98765 43210",
                 website="https://aist.edu.in",
-                verification_status="verified"
+                verification_status="verified",
             )
             db.add(default_inst)
             db.flush()
@@ -57,7 +58,7 @@ def init_db():
                 ("Computer Science & Engineering", "CSE"),
                 ("Information Technology", "IT"),
                 ("Data Science & Artificial Intelligence", "DSAI"),
-                ("Electronics & Communication", "ECE")
+                ("Electronics & Communication", "ECE"),
             ]
             for d_name, d_code in dept_names:
                 dept = Department(institution_id=default_inst.id, name=d_name, code=d_code)
@@ -70,34 +71,50 @@ def init_db():
         # 3. Seed foundational Skill Taxonomy if empty
         if db.query(SkillCategory).count() == 0:
             categories_data = [
-                ("Web & Full Stack", "Web applications, frontend, backend architectures and APIs", [
-                    ("Python", "technical", "advanced"),
-                    ("JavaScript", "technical", "advanced"),
-                    ("TypeScript", "technical", "intermediate"),
-                    ("React", "technical", "advanced"),
-                    ("FastAPI", "technical", "intermediate"),
-                    ("Node.js", "technical", "intermediate"),
-                    ("SQL", "technical", "advanced"),
-                    ("REST APIs", "technical", "advanced")
-                ]),
-                ("Cloud & DevOps", "Cloud infrastructure, containerization and continuous integration", [
-                    ("Docker", "technical", "intermediate"),
-                    ("Kubernetes", "technical", "beginner"),
-                    ("AWS Cloud", "technical", "intermediate"),
-                    ("Git & GitHub", "technical", "advanced"),
-                    ("CI/CD Automation", "technical", "intermediate")
-                ]),
-                ("AI & Data Science", "Machine learning, analytics, and intelligent systems", [
-                    ("Machine Learning", "technical", "intermediate"),
-                    ("Deep Learning", "technical", "intermediate"),
-                    ("Data Analytics", "technical", "intermediate"),
-                    ("NLP", "technical", "beginner")
-                ]),
-                ("Core Professional Competencies", "Essential cross-functional and teamwork competencies", [
-                    ("Problem Solving", "soft", "advanced"),
-                    ("System Design", "technical", "intermediate"),
-                    ("Agile Collaboration", "soft", "advanced")
-                ])
+                (
+                    "Web & Full Stack",
+                    "Web applications, frontend, backend architectures and APIs",
+                    [
+                        ("Python", "technical", "advanced"),
+                        ("JavaScript", "technical", "advanced"),
+                        ("TypeScript", "technical", "intermediate"),
+                        ("React", "technical", "advanced"),
+                        ("FastAPI", "technical", "intermediate"),
+                        ("Node.js", "technical", "intermediate"),
+                        ("SQL", "technical", "advanced"),
+                        ("REST APIs", "technical", "advanced"),
+                    ],
+                ),
+                (
+                    "Cloud & DevOps",
+                    "Cloud infrastructure, containerization and continuous integration",
+                    [
+                        ("Docker", "technical", "intermediate"),
+                        ("Kubernetes", "technical", "beginner"),
+                        ("AWS Cloud", "technical", "intermediate"),
+                        ("Git & GitHub", "technical", "advanced"),
+                        ("CI/CD Automation", "technical", "intermediate"),
+                    ],
+                ),
+                (
+                    "AI & Data Science",
+                    "Machine learning, analytics, and intelligent systems",
+                    [
+                        ("Machine Learning", "technical", "intermediate"),
+                        ("Deep Learning", "technical", "intermediate"),
+                        ("Data Analytics", "technical", "intermediate"),
+                        ("NLP", "technical", "beginner"),
+                    ],
+                ),
+                (
+                    "Core Professional Competencies",
+                    "Essential cross-functional and teamwork competencies",
+                    [
+                        ("Problem Solving", "soft", "advanced"),
+                        ("System Design", "technical", "intermediate"),
+                        ("Agile Collaboration", "soft", "advanced"),
+                    ],
+                ),
             ]
 
             for cat_name, cat_desc, skills_list in categories_data:
@@ -109,7 +126,12 @@ def init_db():
                     s_relevance = item[2] if len(item) > 2 else "high"
                     existing_s = db.query(Skill).filter(Skill.name == s_name).first()
                     if not existing_s:
-                        s_obj = Skill(name=s_name, category_id=cat.id, description=f"{s_name} competency", industry_relevance=s_relevance)
+                        s_obj = Skill(
+                            name=s_name,
+                            category_id=cat.id,
+                            description=f"{s_name} competency",
+                            industry_relevance=s_relevance,
+                        )
                         db.add(s_obj)
             db.flush()
             print(" [+] Populated standard skill categories and industry skills ontology")
@@ -118,9 +140,17 @@ def init_db():
         if db.query(CareerRole).count() == 0:
             career_roles = [
                 ("Full Stack Engineer", "Technology", "End-to-end web system architect and application builder"),
-                ("AI / ML Engineer", "Artificial Intelligence", "Intelligent models, inference pipelines, and machine learning specialist"),
-                ("Cloud DevOps Engineer", "Cloud & Infrastructure", "Scalable cloud deployments, containers, and automated workflows"),
-                ("Data Analyst", "Analytics", "Enterprise data telemetry, analytics, and reporting specialist")
+                (
+                    "AI / ML Engineer",
+                    "Artificial Intelligence",
+                    "Intelligent models, inference pipelines, and machine learning specialist",
+                ),
+                (
+                    "Cloud DevOps Engineer",
+                    "Cloud & Infrastructure",
+                    "Scalable cloud deployments, containers, and automated workflows",
+                ),
+                ("Data Analyst", "Analytics", "Enterprise data telemetry, analytics, and reporting specialist"),
             ]
             for r_title, r_sector, r_desc in career_roles:
                 cr = CareerRole(title=r_title, sector=r_sector, description=r_desc)
@@ -151,7 +181,7 @@ def init_db():
                 "password": "DemoPassword@2026",
                 "role": "student",
                 "full_name": "Aarav Sharma",
-                "profile_type": "student"
+                "profile_type": "student",
             },
             {
                 "email": "faculty@aicportal.in",
@@ -159,7 +189,7 @@ def init_db():
                 "password": "DemoPassword@2026",
                 "role": "faculty",
                 "full_name": "Dr. Priya Iyer",
-                "profile_type": "faculty"
+                "profile_type": "faculty",
             },
             {
                 "email": "industry@aicportal.in",
@@ -168,15 +198,15 @@ def init_db():
                 "role": "industry",
                 "company_name": "Nexus Dynamics Corp",
                 "sector": "Information Technology",
-                "profile_type": "industry"
+                "profile_type": "industry",
             },
             {
                 "email": "institution@aicportal.in",
                 "username": "institution_demo",
                 "password": "DemoPassword@2026",
                 "role": "institution",
-                "profile_type": "institution"
-            }
+                "profile_type": "institution",
+            },
         ]
 
         for acc in demo_accounts:
@@ -189,7 +219,7 @@ def init_db():
                     role=acc["role"],
                     is_approved=True,
                     is_active=True,
-                    institution_id=default_inst.id if default_inst else None
+                    institution_id=default_inst.id if default_inst else None,
                 )
                 db.add(u)
                 db.flush()
@@ -203,7 +233,7 @@ def init_db():
                         course="B.Tech Computer Science & Engineering",
                         year_of_study=3,
                         cgpa=8.8,
-                        career_interests="Full Stack Web Development, Cloud Architecture, AI Services"
+                        career_interests="Full Stack Web Development, Cloud Architecture, AI Services",
                     )
                     db.add(sp)
                     db.flush()
@@ -211,9 +241,25 @@ def init_db():
                     py_skill = db.query(Skill).filter(Skill.name == "Python").first()
                     react_skill = db.query(Skill).filter(Skill.name == "React").first()
                     if py_skill:
-                        db.add(StudentSkill(student_id=sp.id, skill_id=py_skill.id, skill_level="intermediate", verified_by_assessment=True, score=85))
+                        db.add(
+                            StudentSkill(
+                                student_id=sp.id,
+                                skill_id=py_skill.id,
+                                skill_level="intermediate",
+                                verified_by_assessment=True,
+                                score=85,
+                            )
+                        )
                     if react_skill:
-                        db.add(StudentSkill(student_id=sp.id, skill_id=react_skill.id, skill_level="intermediate", verified_by_assessment=True, score=80))
+                        db.add(
+                            StudentSkill(
+                                student_id=sp.id,
+                                skill_id=react_skill.id,
+                                skill_level="intermediate",
+                                verified_by_assessment=True,
+                                score=80,
+                            )
+                        )
 
                 elif acc["profile_type"] == "faculty":
                     fp = FacultyProfile(
@@ -224,7 +270,7 @@ def init_db():
                         designation="Associate Professor",
                         specialization="Distributed Computing & Machine Learning",
                         experience_years=9,
-                        research_areas="Distributed Systems, Cloud Microservices, AI/ML Pipelines"
+                        research_areas="Distributed Systems, Cloud Microservices, AI/ML Pipelines",
                     )
                     db.add(fp)
 
@@ -236,7 +282,7 @@ def init_db():
                         description="Global enterprise engineering scalable cloud and web solutions.",
                         location="Bengaluru, India",
                         website="https://nexusdynamics.io",
-                        verification_status="verified"
+                        verification_status="verified",
                     )
                     db.add(ip)
 

@@ -33,4 +33,3 @@ export function getDocumentViewUrl(docOrUrl, docId) {
 
   return `/uploads/${targetUrl.replace(/^\/+/, '')}`;
 }
-
