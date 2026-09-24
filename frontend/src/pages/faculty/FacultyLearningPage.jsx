@@ -80,7 +80,10 @@ export function FacultyLearningPage() {
         api.get('/learning-programs/my-enrollments').catch(() => []),
       ]);
 
-      setPrograms(progsData);
+      const filteredProgs = (progsData || []).filter(
+        (p) => !p.target_audience || p.target_audience === 'faculty' || p.target_audience === 'all'
+      );
+      setPrograms(filteredProgs);
       setMyEnrollments(enrollsData);
     } catch (err) {
       toast.error('Error loading FDP programs: ' + err.message);
@@ -166,7 +169,7 @@ export function FacultyLearningPage() {
       }));
 
       if (res.passed) {
-        toast.success(`🎉 Module ${moduleId} Assessment Passed (${res.score_percent}%)!`);
+        toast.success(`Module ${moduleId} Assessment Passed (${res.score_percent}%)!`);
         setActiveEnrollment((prev) => ({
           ...prev,
           progress_percent: res.progress_percent,
@@ -181,7 +184,7 @@ export function FacultyLearningPage() {
             designation: user?.profile?.designation || 'Faculty Member',
             institution_name: user?.profile?.institution_name || 'Academic Institution',
           });
-          toast.success('🏆 All modules passed! Your verified Faculty Certificate is ready!');
+          toast.success('All modules passed! Your verified Faculty Certificate is ready.');
         }
       } else {
         toast.error(`Score: ${res.score_percent}%. Passing threshold is ${res.passing_threshold}%. Review the explanations below and retake.`);
@@ -220,7 +223,7 @@ export function FacultyLearningPage() {
       setQuizResult(res);
 
       if (res.passed) {
-        toast.success(`🎉 Congratulations! You scored ${res.score_percent}% and earned your FDP Certificate!`);
+        toast.success(`Congratulations! You scored ${res.score_percent}% and earned your FDP Certificate.`);
         if (res.certificate) {
           setPreviewCert({
             ...res.certificate,

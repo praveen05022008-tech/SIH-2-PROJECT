@@ -20,7 +20,9 @@ import {
   Upload,
   Download,
   Code,
-  HelpCircle
+  HelpCircle,
+  GraduationCap,
+  Building2
 } from 'lucide-react';
 import { LoadingSpinner } from '../../components/common/LoadingSpinner';
 import { CertificateModal } from '../../components/common/CertificateModal';
@@ -91,6 +93,7 @@ export function IndustryLearningPage() {
     provider_name: user?.organization_name || user?.username || "Cognizant Technology Solutions",
     program_type: "course",
     learning_mode: "self_paced",
+    target_audience: "student",
     duration: "4 Weeks",
     skills_covered: "React, FastAPI, Docker, Microservices, CI/CD, SQL",
     description: "Comprehensive enterprise-grade training covering modern full-stack web architecture, API design, database optimization, and cloud deployment pipelines.",
@@ -105,6 +108,7 @@ export function IndustryLearningPage() {
         duration: "2.5 Hours",
         reading_time: "25 mins",
         description: "Core principles of scalable enterprise architectures, layered patterns, and developer environment configuration.",
+        content: "## Architectural Foundations & Clean Design\n\n### 1. Monolithic vs Microservices Architecture\nIn modern enterprise software engineering, architectural patterns dictate scalability, testability, and team velocity:\n- **Monolithic Architecture**: Single unified codebase. Simple to deploy initially, but suffers from tight coupling, high regression blast radius, and deployment bottlenecks.\n- **Microservices Architecture**: Independently deployable services communicating over lightweight protocols (HTTP/gRPC/Kafka). Provides domain boundary isolation and horizontal scaling.\n\n### 2. Layered Clean Architecture\nAdhering to separation of concerns prevents data pollution across layers:\n1. **Presentation Layer**: React UI components, client-side routing, and optimistic state.\n2. **API Controller Layer**: Route handlers, parameter validation via Pydantic schemas, and JWT authentication guards.\n3. **Domain / Business Service Layer**: Core business rules, transactions, and notification triggers.\n4. **Data Access Layer**: Database queries, ORM sessions, and connection pooling.\n\n### 3. Containerization with Docker\nDocker provides standardized containers encapsulating code, runtime, and system dependencies, guaranteeing deterministic execution across local dev and production clusters.",
         topics: [
           "Monolithic vs Microservices Architecture",
           "Layered Clean Architecture & Separation of Concerns",
@@ -143,6 +147,7 @@ export function IndustryLearningPage() {
         duration: "3 Hours",
         reading_time: "30 mins",
         description: "Building resilient REST APIs, schema validation with Pydantic, and database indexing strategies.",
+        content: "## High-Performance API & Data Layer Design\n\n### 1. Asynchronous REST Endpoints with FastAPI\nFastAPI leverages Python's asyncio event loop and Starlette to handle high-concurrency workloads with sub-millisecond response latencies:\n- **Dependency Injection**: Inject database sessions, authenticated user contexts, and rate limiters cleanly.\n- **Schema Validation**: Pydantic models enforce strict payload contracts, automatic type casting, and detailed validation error messages.\n\n### 2. Database Indexing & Query Latency Optimization\nDatabase performance degradation is most often caused by full-table scans (O(N) complexity):\n- **B-Tree Indexes**: Ideal for equality and range lookups on foreign keys and timestamps.\n- **Composite Indexes**: Compound keys for multi-column query filtering.\n- **Connection Pooling**: Reusing database connections avoids TCP handshake overhead under load.\n\n### 3. JWT Security & Role-Based Access Control\nStateless JSON Web Tokens (JWT) signed with HMAC-SHA256 or RSA-256 securely convey user identity and role claims across microservice boundaries.",
         topics: [
           "FastAPI Async Endpoints & Dependency Injection",
           "Database Indexing & Query Latency Optimization",
@@ -181,6 +186,7 @@ export function IndustryLearningPage() {
         duration: "3.5 Hours",
         reading_time: "35 mins",
         description: "Production security hardening, secret management, CI/CD pipeline automation, and certification capstone.",
+        content: "## Security Hardening, CI/CD Automation & Enterprise Capstone\n\n### 1. OWASP Security Standards & Secret Management\nNever store credentials or private keys in source code:\n- **Secret Management**: Inject sensitive environment variables at runtime via secret managers (e.g., AWS Secrets Manager, HashiCorp Vault).\n- **Input Sanitization**: Guard against SQL injection via parameterized queries and Cross-Site Scripting (XSS) via context-aware output escaping.\n\n### 2. Automated CI/CD Pipelines\nContinuous Integration and Continuous Deployment (CI/CD) pipelines enforce quality gates on every Pull Request:\n- Linting and static analysis (ESLint, Flake8, Black).\n- Automated unit and integration test suites.\n- Container image compilation and vulnerability scanning.\n- Blue/Green zero-downtime deployment rollouts.\n\n### 3. Final Certification Capstone Preparation\nReview all module concepts before attempting the comprehensive Final Certification Examination. Passing unlocks your verified digital credential with unique cryptographic hash verification.",
         topics: [
           "OWASP Security Standards & Secret Management Vaults",
           "Automated CI/CD Workflows & Regression Testing",
@@ -212,6 +218,44 @@ export function IndustryLearningPage() {
             explanation: "CI/CD automates quality checks, test execution, and deployment verification."
           }
         ]
+      }
+    ],
+    final_exam: [
+      {
+        id: 1,
+        question: "In a microservices architecture, how should communication between independently scaled services be structured?",
+        options: [
+          "Using well-defined API contracts (REST, gRPC, or event buses)",
+          "Allowing all services to write directly to each other's private databases",
+          "Sharing common global memory variables across servers",
+          "Disabling error handling to speed up throughput"
+        ],
+        correct_answer: 0,
+        explanation: "Decoupled API contracts and event-driven messaging ensure autonomy and prevent cascading failures across services."
+      },
+      {
+        id: 2,
+        question: "Which mechanism provides the most secure method for authenticating stateless API requests across distributed backends?",
+        options: [
+          "Cryptographically signed JSON Web Tokens (JWT) passed in the Authorization header",
+          "Passing cleartext passwords in URL query parameters",
+          "Storing user passwords in browser localStorage",
+          "Disabling CORS and firewall policies"
+        ],
+        correct_answer: 0,
+        explanation: "Signed JWTs carry validated claims and timestamps without requiring stateful session lookups on every request."
+      },
+      {
+        id: 3,
+        question: "What is the primary role of Continuous Integration (CI) in an enterprise engineering workflow?",
+        options: [
+          "To automatically run tests, lint checks, and build validation on code changes",
+          "To bypass code reviews by senior engineers",
+          "To deploy untested code directly to production",
+          "To increase manual QA cycle time"
+        ],
+        correct_answer: 0,
+        explanation: "CI catches regressions early in the lifecycle by verifying builds and tests on every commit."
       }
     ]
   };
@@ -257,6 +301,7 @@ export function IndustryLearningPage() {
       if (parsed.provider_name) setProviderName(parsed.provider_name);
       if (parsed.program_type) setProgramType(parsed.program_type);
       if (parsed.learning_mode) setLearningMode(parsed.learning_mode);
+      if (parsed.target_audience) setTargetAudience(parsed.target_audience);
       if (parsed.duration) setDuration(parsed.duration);
       if (parsed.skills_covered) setSkillsCovered(parsed.skills_covered);
       if (parsed.description) setDescription(parsed.description);
@@ -267,7 +312,7 @@ export function IndustryLearningPage() {
 
       if (parsed.modules && Array.isArray(parsed.modules)) {
         setModules(parsed.modules);
-        if (!parsed.quiz) {
+        if (!parsed.quiz && !parsed.final_exam && !parsed.quiz_json) {
           const aggregated = [];
           parsed.modules.forEach((m) => {
             if (m.quiz && Array.isArray(m.quiz)) {
@@ -280,8 +325,15 @@ export function IndustryLearningPage() {
         }
       }
 
-      if (parsed.quiz && Array.isArray(parsed.quiz)) {
+      if (parsed.final_exam && Array.isArray(parsed.final_exam)) {
+        setQuizQuestions(parsed.final_exam);
+      } else if (parsed.quiz && Array.isArray(parsed.quiz)) {
         setQuizQuestions(parsed.quiz);
+      } else if (parsed.quiz_json) {
+        try {
+          const qj = typeof parsed.quiz_json === 'string' ? JSON.parse(parsed.quiz_json) : parsed.quiz_json;
+          if (Array.isArray(qj)) setQuizQuestions(qj);
+        } catch {}
       }
 
       toast.success('Successfully imported course parameters, curriculum modules & per-module quizzes!');
@@ -710,13 +762,30 @@ export function IndustryLearningPage() {
                         </div>
                       </td>
                       <td>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', alignItems: 'flex-start' }}>
-                          <span className="badge badge-primary" style={{ textTransform: 'capitalize' }}>
-                            {p.program_type}
-                          </span>
-                          <span style={{ fontSize: '11px', color: '#64748B', textTransform: 'capitalize' }}>
-                            {p.learning_mode?.replace('_', ' ') || 'Online'}
-                          </span>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '5px', alignItems: 'flex-start' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <span className="badge badge-primary" style={{ textTransform: 'capitalize' }}>
+                              {p.program_type}
+                            </span>
+                            <span style={{ fontSize: '11px', color: '#64748B', textTransform: 'capitalize' }}>
+                              {p.learning_mode?.replace('_', ' ') || 'Online'}
+                            </span>
+                          </div>
+                          {p.target_audience === 'student' && (
+                            <span style={{ fontSize: '10.5px', color: '#1D4ED8', backgroundColor: '#EFF6FF', border: '1px solid #BFDBFE', padding: '2px 6px', borderRadius: '4px', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                              <GraduationCap size={11} /> Students Only
+                            </span>
+                          )}
+                          {p.target_audience === 'faculty' && (
+                            <span style={{ fontSize: '10.5px', color: '#7C3AED', backgroundColor: '#F5F3FF', border: '1px solid #DDD6FE', padding: '2px 6px', borderRadius: '4px', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                              <Building2 size={11} /> Faculty (FDP) Only
+                            </span>
+                          )}
+                          {(!p.target_audience || p.target_audience === 'all') && (
+                            <span style={{ fontSize: '10.5px', color: '#059669', backgroundColor: '#ECFDF5', border: '1px solid #A7F3D0', padding: '2px 6px', borderRadius: '4px', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                              <Users size={11} /> Students & Faculty
+                            </span>
+                          )}
                         </div>
                       </td>
                       <td style={{ fontSize: '13px', color: '#334155' }}>
@@ -910,7 +979,7 @@ export function IndustryLearningPage() {
                   gap: '6px',
                 }}
               >
-                <Code size={15} /> 3. ⚡ Upload / Paste JSON
+                <Code size={15} /> 3. Upload / Paste JSON
               </button>
             </div>
 
@@ -1023,41 +1092,128 @@ export function IndustryLearningPage() {
                     </div>
                   </div>
 
-                  {/* Two Column Row: Target Audience & Faculty Credits */}
-                  <div style={{ display: 'grid', gridTemplateColumns: (targetAudience === 'faculty' || programType === 'fdp') ? '1fr 1fr' : '1fr', gap: '16px' }}>
-                    <div>
-                      <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#1E293B', marginBottom: '6px' }}>
-                        Target Audience <span style={{ color: '#EF4444' }}>*</span>
-                      </label>
-                      <select
-                        value={targetAudience}
-                        onChange={(e) => setTargetAudience(e.target.value)}
-                        style={{ width: '100%', padding: '10px 14px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '13.5px', backgroundColor: '#FFFFFF', boxSizing: 'border-box' }}
+                  {/* Target Audience Interactive Card Selection */}
+                  <div>
+                    <label style={{ display: 'block', fontSize: '13px', fontWeight: 700, color: '#0F172A', marginBottom: '8px' }}>
+                      Who is this Program Intended For? (Target Audience) <span style={{ color: '#EF4444' }}>*</span>
+                    </label>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px' }}>
+                      {/* Option 1: Students Only */}
+                      <div
+                        onClick={() => setTargetAudience('student')}
+                        style={{
+                          border: targetAudience === 'student' ? '2px solid #2563EB' : '1px solid #CBD5E1',
+                          backgroundColor: targetAudience === 'student' ? '#EFF6FF' : '#FFFFFF',
+                          borderRadius: '10px',
+                          padding: '14px',
+                          cursor: 'pointer',
+                          transition: 'all 0.15s ease',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          gap: '6px',
+                        }}
                       >
-                        <option value="all">All Audiences (Open to All)</option>
-                        <option value="faculty">Faculty & Academicians Only (FDP)</option>
-                        <option value="student">Students Only</option>
-                      </select>
-                    </div>
-
-                    {(targetAudience === 'faculty' || programType === 'fdp') && (
-                      <div>
-                        <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#1E293B', marginBottom: '6px' }}>
-                          FDP Academic Credits (e.g. 2.0 Credits)
-                        </label>
-                        <input
-                          type="number"
-                          step="0.5"
-                          min="0"
-                          max="20"
-                          placeholder="e.g. 2.0"
-                          value={facultyCredits}
-                          onChange={(e) => setFacultyCredits(e.target.value)}
-                          style={{ width: '100%', padding: '10px 14px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '13.5px', boxSizing: 'border-box' }}
-                        />
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                          <span style={{ fontSize: '13.5px', fontWeight: 700, color: targetAudience === 'student' ? '#1D4ED8' : '#0F172A', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <GraduationCap size={15} color={targetAudience === 'student' ? '#2563EB' : '#64748B'} /> Students Only
+                          </span>
+                          <input
+                            type="radio"
+                            name="targetAudience"
+                            checked={targetAudience === 'student'}
+                            onChange={() => setTargetAudience('student')}
+                          />
+                        </div>
+                        <p style={{ margin: 0, fontSize: '11.5px', color: '#64748B', lineHeight: 1.4 }}>
+                          Visible exclusively on Student Portal. Hidden from Faculty FDP catalog.
+                        </p>
                       </div>
-                    )}
+
+                      {/* Option 2: Faculty Only (FDP) */}
+                      <div
+                        onClick={() => setTargetAudience('faculty')}
+                        style={{
+                          border: targetAudience === 'faculty' ? '2px solid #7C3AED' : '1px solid #CBD5E1',
+                          backgroundColor: targetAudience === 'faculty' ? '#F5F3FF' : '#FFFFFF',
+                          borderRadius: '10px',
+                          padding: '14px',
+                          cursor: 'pointer',
+                          transition: 'all 0.15s ease',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          gap: '6px',
+                        }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                          <span style={{ fontSize: '13.5px', fontWeight: 700, color: targetAudience === 'faculty' ? '#6D28D9' : '#0F172A', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <Building2 size={15} color={targetAudience === 'faculty' ? '#7C3AED' : '#64748B'} /> Faculty (FDP) Only
+                          </span>
+                          <input
+                            type="radio"
+                            name="targetAudience"
+                            checked={targetAudience === 'faculty'}
+                            onChange={() => setTargetAudience('faculty')}
+                          />
+                        </div>
+                        <p style={{ margin: 0, fontSize: '11.5px', color: '#64748B', lineHeight: 1.4 }}>
+                          Visible exclusively on Faculty FDP Portal. Hidden from Students.
+                        </p>
+                      </div>
+
+                      {/* Option 3: Both Students & Faculty */}
+                      <div
+                        onClick={() => setTargetAudience('all')}
+                        style={{
+                          border: targetAudience === 'all' ? '2px solid #059669' : '1px solid #CBD5E1',
+                          backgroundColor: targetAudience === 'all' ? '#ECFDF5' : '#FFFFFF',
+                          borderRadius: '10px',
+                          padding: '14px',
+                          cursor: 'pointer',
+                          transition: 'all 0.15s ease',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          gap: '6px',
+                        }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                          <span style={{ fontSize: '13.5px', fontWeight: 700, color: targetAudience === 'all' ? '#047857' : '#0F172A', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <Users size={15} color={targetAudience === 'all' ? '#059669' : '#64748B'} /> Both Students & Faculty
+                          </span>
+                          <input
+                            type="radio"
+                            name="targetAudience"
+                            checked={targetAudience === 'all'}
+                            onChange={() => setTargetAudience('all')}
+                          />
+                        </div>
+                        <p style={{ margin: 0, fontSize: '11.5px', color: '#64748B', lineHeight: 1.4 }}>
+                          Open to all learners across both Student and Faculty portals.
+                        </p>
+                      </div>
+                    </div>
                   </div>
+
+                  {/* FDP Academic Credits row if faculty or FDP or both selected */}
+                  {(targetAudience === 'faculty' || programType === 'fdp' || targetAudience === 'all') && (
+                    <div style={{ backgroundColor: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '10px', padding: '14px' }}>
+                      <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#1E293B', marginBottom: '6px' }}>
+                        Faculty Development Program (FDP) Academic / Continuing Education Credits
+                      </label>
+                      <input
+                        type="number"
+                        step="0.5"
+                        min="0"
+                        max="20"
+                        placeholder="e.g. 2.0"
+                        value={facultyCredits}
+                        onChange={(e) => setFacultyCredits(e.target.value)}
+                        style={{ width: '100%', maxWidth: '280px', padding: '8px 12px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '13.5px', boxSizing: 'border-box' }}
+                      />
+                      <span style={{ display: 'block', fontSize: '11.5px', color: '#64748B', marginTop: '4px' }}>
+                        Credits accredited to participating faculty upon course completion and certificate verification.
+                      </span>
+                    </div>
+                  )}
 
                   {/* Two Column Row: Duration & Skills Covered */}
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>

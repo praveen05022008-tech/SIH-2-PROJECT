@@ -166,12 +166,33 @@ def get_learning_programs(
         query = query.filter(LearningProgram.program_type == program_type)
     if learning_mode:
         query = query.filter(LearningProgram.learning_mode == learning_mode)
-    if target_audience:
+
+    # Role-based audience isolation:
+    # 1. If logged-in user is 'student', strictly show only 'student' or 'all' (never 'faculty' courses)
+    # 2. If logged-in user is 'faculty', strictly show only 'faculty' or 'all' (never 'student' courses)
+    # 3. If explicit target_audience param is provided and allowed, filter accordingly
+    if current_user and hasattr(current_user, "role"):
+        if current_user.role == "student":
+            query = query.filter(
+                (LearningProgram.target_audience == "student")
+                | (LearningProgram.target_audience == "all")
+                | (LearningProgram.target_audience.is_(None))
+            )
+        elif current_user.role == "faculty":
+            query = query.filter(
+                (LearningProgram.target_audience == "faculty")
+                | (LearningProgram.target_audience == "all")
+                | (LearningProgram.target_audience.is_(None))
+            )
+        elif target_audience and target_audience != "all":
+            query = query.filter(LearningProgram.target_audience == target_audience)
+    elif target_audience and target_audience != "all":
         query = query.filter(
             (LearningProgram.target_audience == target_audience)
             | (LearningProgram.target_audience == "all")
             | (LearningProgram.target_audience.is_(None))
         )
+
     if search:
         s = f"%{search}%"
         query = query.filter(
@@ -448,6 +469,18 @@ def enroll_in_program(
     if not prog:
         raise HTTPException(status_code=404, detail="Program not found.")
 
+    # Audience eligibility validation
+    aud = prog.target_audience or "all"
+    if aud == "faculty" and current_user.role != "faculty":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="This program is restricted to Faculty & Academicians only (FDP).",
+        )
+    if aud == "student" and current_user.role != "student":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail="This program is restricted to Students only."
+        )
+
     existing = (
         db.query(ProgramEnrollment)
         .filter(
@@ -573,8 +606,9 @@ def submit_certification_quiz(
     db: Session = Depends(get_db),
 ):
     """
-    Submits participant's answers to the certification exam.
-    Only if the participant passes (>= passing_score) is the certificate generated & emailed.
+    Submits participant's answers to the Final Comprehensive Certification Exam.
+    Only if all modules are completed AND the participant passes (>= passing_score)
+    is the certificate generated & emailed.
     """
     prog = db.query(LearningProgram).filter(LearningProgram.id == program_id).first()
     if not prog:
@@ -590,6 +624,23 @@ def submit_certification_quiz(
     )
     if not enrollment:
         raise HTTPException(status_code=400, detail="Please enroll in this program before taking the exam.")
+
+    try:
+        modules = json.loads(prog.modules_json or "[]")
+    except Exception:
+        modules = []
+
+    # Enforce that all modules must be completed and passed before taking the final exam
+    try:
+        completed_set = set(json.loads(enrollment.completed_modules or "[]"))
+    except Exception:
+        completed_set = set()
+
+    if len(modules) > 0 and len(completed_set) < len(modules):
+        raise HTTPException(
+            status_code=400,
+            detail=f"You must complete and pass all {len(modules)} modules before attempting the final certification exam. ({len(completed_set)}/{len(modules)} completed)",
+        )
 
     try:
         questions = json.loads(prog.quiz_json or "[]")
@@ -642,6 +693,8 @@ def submit_certification_quiz(
         else:
             db.commit()
     else:
+        # Keep enrolled progress at module completion level (85%) so they can retake final exam
+        enrollment.progress_percent = 85.0
         db.commit()
 
     return SubmitQuizResponse(
@@ -661,13 +714,13 @@ def submit_certification_quiz(
 def submit_module_quiz(
     program_id: int,
     req: SubmitModuleQuizRequest,
-    current_user: User = Depends(require_role(["student"])),
+    current_user: User = Depends(require_role(["student", "faculty"])),
     db: Session = Depends(get_db),
 ):
     """
-    Evaluates student's answers for a specific module's quiz.
-    If score >= passing_score, marks the module complete and recalculates overall course progress.
-    If all modules are completed and passed, automatically triggers certificate issuance and email delivery.
+    Evaluates participant's answers for a specific module's quiz.
+    Sequential unlocking: If score >= passing_score, unlocks the next module.
+    If all modules are passed, unlocks the Final Comprehensive Certification Exam.
     """
     prog = db.query(LearningProgram).filter(LearningProgram.id == program_id).first()
     if not prog:
@@ -692,84 +745,69 @@ def submit_module_quiz(
     if not modules:
         raise HTTPException(status_code=400, detail="No course modules configured for this program.")
 
-    # Find the target module
-    target_module = None
-    for idx, mod in enumerate(modules):
-        mod_id = mod.get("id", idx + 1)
-        if mod_id == req.module_id or str(mod_id) == str(req.module_id):
-            target_module = mod
-            break
-
-    if not target_module:
-        raise HTTPException(status_code=404, detail=f"Module {req.module_id} not found in this curriculum.")
-
-    module_quiz = target_module.get("quiz", [])
-    if not module_quiz:
-        # If no quiz specifically on this module, auto-pass module
-        try:
-            completed_set = set(json.loads(enrollment.completed_modules or "[]"))
-        except Exception:
-            completed_set = set()
-        completed_set.add(req.module_id)
-        enrollment.completed_modules = json.dumps(list(completed_set))
-        all_completed = len(completed_set) >= len(modules)
-        enrollment.progress_percent = round((len(completed_set) / max(len(modules), 1)) * 100.0, 1)
-        cert_resp = None
-        if all_completed:
-            enrollment.status = "completed"
-            enrollment.quiz_passed = True
-            if prog.auto_certify and not enrollment.certificate_issued:
-                cert = _generate_certificate_for_enrollment(enrollment, db)
-                cert_resp = CertificateResponse.from_orm(cert)
-        db.commit()
-        return SubmitModuleQuizResponse(
-            module_id=req.module_id,
-            score_percent=100.0,
-            passed=True,
-            passing_threshold=prog.passing_score or 60.0,
-            correct_count=0,
-            total_questions=0,
-            progress_percent=enrollment.progress_percent,
-            completed_modules=list(completed_set),
-            all_completed=all_completed,
-            certificate_issued=enrollment.certificate_issued,
-            certificate=cert_resp,
-            detailed_results=[],
-        )
-
-    total_q = len(module_quiz)
-    correct_count = 0
-    detailed_results = []
-
-    for q in module_quiz:
-        qid_str = str(q.get("id"))
-        correct_idx = q.get("correct_answer", 0)
-        selected_idx = req.answers.get(qid_str)
-
-        is_correct = selected_idx is not None and int(selected_idx) == int(correct_idx)
-        if is_correct:
-            correct_count += 1
-
-        detailed_results.append(
-            {
-                "question_id": q.get("id"),
-                "question": q.get("question"),
-                "options": q.get("options", []),
-                "selected_answer": selected_idx,
-                "correct_answer": correct_idx,
-                "is_correct": is_correct,
-                "explanation": q.get("explanation", ""),
-            }
-        )
-
-    score_pct = round((correct_count / total_q) * 100.0, 1)
-    passing_th = prog.passing_score if prog.passing_score is not None else 60.0
-    passed = score_pct >= passing_th
-
     try:
         completed_set = set(json.loads(enrollment.completed_modules or "[]"))
     except Exception:
         completed_set = set()
+
+    # Find the target module index
+    target_idx = None
+    target_module = None
+    for idx, mod in enumerate(modules):
+        mod_id = mod.get("id", idx + 1)
+        if mod_id == req.module_id or str(mod_id) == str(req.module_id):
+            target_idx = idx
+            target_module = mod
+            break
+
+    if target_module is None:
+        raise HTTPException(status_code=404, detail=f"Module {req.module_id} not found in this curriculum.")
+
+    # Validate sequential access: previous module must be completed
+    if target_idx > 0:
+        prev_mod_id = modules[target_idx - 1].get("id", target_idx)
+        if prev_mod_id not in completed_set and str(prev_mod_id) not in [str(x) for x in completed_set]:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Module {target_idx + 1} is locked. Please complete and pass Module {target_idx} first.",
+            )
+
+    module_quiz = target_module.get("quiz", [])
+    total_q = len(module_quiz)
+    correct_count = 0
+    detailed_results = []
+
+    if total_q == 0:
+        # If no quiz defined for this specific module, mark module as read/passed
+        passed = True
+        score_pct = 100.0
+    else:
+        for q in module_quiz:
+            qid_str = str(q.get("id"))
+            correct_idx = q.get("correct_answer", 0)
+            selected_idx = req.answers.get(qid_str)
+
+            is_correct = selected_idx is not None and int(selected_idx) == int(correct_idx)
+            if is_correct:
+                correct_count += 1
+
+            detailed_results.append(
+                {
+                    "question_id": q.get("id"),
+                    "question": q.get("question"),
+                    "options": q.get("options", []),
+                    "selected_answer": selected_idx,
+                    "correct_answer": correct_idx,
+                    "is_correct": is_correct,
+                    "explanation": q.get("explanation", ""),
+                }
+            )
+
+        score_pct = round((correct_count / total_q) * 100.0, 1)
+        passing_th = prog.passing_score if prog.passing_score is not None else 60.0
+        passed = score_pct >= passing_th
+
+    passing_th = prog.passing_score if prog.passing_score is not None else 60.0
 
     if passed:
         completed_set.add(req.module_id)
@@ -777,18 +815,31 @@ def submit_module_quiz(
 
     total_mods_count = max(len(modules), 1)
     all_completed = len(completed_set) >= len(modules)
-    enrollment.progress_percent = round((len(completed_set) / total_mods_count) * 100.0, 1)
+
+    has_final_exam = bool(prog.quiz_json and prog.quiz_json != "[]")
+
+    if has_final_exam:
+        # Modules account for up to 80% progress; Final exam unlocks remaining 20% + Certificate
+        module_progress = round((len(completed_set) / total_mods_count) * 80.0, 1)
+        if enrollment.quiz_passed:
+            enrollment.progress_percent = 100.0
+        else:
+            enrollment.progress_percent = module_progress
+    else:
+        enrollment.progress_percent = round((len(completed_set) / total_mods_count) * 100.0, 1)
+
+    if enrollment.progress_percent > 0 and enrollment.status != "completed":
+        enrollment.status = "in_progress"
 
     certificate_response = None
-    if all_completed and passed:
+    # Only if there is NO final exam does completing all modules issue certificate
+    if not has_final_exam and all_completed and passed:
         enrollment.status = "completed"
         enrollment.quiz_passed = True
-        enrollment.quiz_score = score_pct
+        enrollment.progress_percent = 100.0
         if prog.auto_certify and not enrollment.certificate_issued:
             cert = _generate_certificate_for_enrollment(enrollment, db)
             certificate_response = CertificateResponse.from_orm(cert)
-    elif enrollment.progress_percent > 0:
-        enrollment.status = "in_progress"
 
     db.commit()
 

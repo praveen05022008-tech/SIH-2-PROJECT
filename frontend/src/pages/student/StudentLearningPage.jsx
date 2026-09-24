@@ -24,10 +24,15 @@ import {
   HelpCircle,
   AlertCircle,
   RotateCcw,
-  CheckCircle
+  CheckCircle,
+  Lock,
+  Unlock,
+  ArrowRight,
+  BookMarked
 } from 'lucide-react';
 import { LoadingSpinner } from '../../components/common/LoadingSpinner';
 import { CertificateModal } from '../../components/common/CertificateModal';
+import { MarkdownRenderer } from '../../components/common/MarkdownRenderer';
 
 export function StudentLearningPage() {
   const { user } = useAuth();
@@ -80,7 +85,10 @@ export function StudentLearningPage() {
         user?.role === 'student' ? api.get('/learning-programs/my-enrollments').catch(() => []) : Promise.resolve([]),
       ]);
 
-      setPrograms(progsData);
+      const filteredProgs = (progsData || []).filter(
+        (p) => !p.target_audience || p.target_audience === 'student' || p.target_audience === 'all'
+      );
+      setPrograms(filteredProgs);
       setMyEnrollments(enrollsData);
     } catch (err) {
       toast.error('Error loading programs: ' + err.message);
@@ -97,7 +105,7 @@ export function StudentLearningPage() {
   const handleEnroll = async (prog) => {
     try {
       const enr = await api.post(`/learning-programs/${prog.id}/enroll`);
-      toast.success(`Successfully enrolled in "${prog.title}"!`);
+      toast.success(`Successfully enrolled in "${prog.title}"`);
       await fetchData();
       handleOpenPlayer(prog, enr);
     } catch (err) {
@@ -112,45 +120,56 @@ export function StudentLearningPage() {
     setSelectedModuleIndex(0);
     setQuizAnswers({});
     setQuizResult(null);
+    setModuleQuizAnswers({});
+    setModuleQuizResult({});
   };
 
-  const handleToggleModuleComplete = async (moduleId, isCurrentlyCompleted) => {
-    if (!activeEnrollment) return;
+  const handleSubmitQuiz = async (e) => {
+    e.preventDefault();
+    if (!activePlayerProgram) return;
 
-    setUpdatingModuleId(moduleId);
+    let parsedQuestions = [];
     try {
-      const res = await api.post(`/learning-programs/enrollments/${activeEnrollment.id}/progress`, {
-        module_id: moduleId,
-        completed: !isCurrentlyCompleted,
+      parsedQuestions = JSON.parse(activePlayerProgram.quiz_json || '[]');
+    } catch {}
+
+    const answeredCount = Object.keys(quizAnswers).length;
+    if (answeredCount < parsedQuestions.length) {
+      toast.error(`Please answer all ${parsedQuestions.length} questions before submitting.`);
+      return;
+    }
+
+    setSubmittingQuiz(true);
+    try {
+      const res = await api.post(`/learning-programs/${activePlayerProgram.id}/submit-quiz`, {
+        answers: quizAnswers,
       });
-
-      setActiveEnrollment((prev) => ({
-        ...prev,
-        progress_percent: res.progress_percent,
-        status: res.status,
-        completed_modules: JSON.stringify(res.completed_modules),
-        quiz_passed: res.quiz_passed,
-        certificate_issued: res.certificate_issued,
-      }));
-
-      toast.success(isCurrentlyCompleted ? 'Module marked incomplete' : 'Module marked completed!');
-      fetchData();
+      setQuizResult(res);
+      if (res.passed) {
+        toast.success(`Congratulations! You passed the final certification exam with ${res.score_percent}%.`);
+      } else {
+        toast.error(`Score: ${res.score_percent}%. Required: ${res.passing_threshold}%. You can review the material and retake.`);
+      }
+      await fetchData();
+      const updatedEnrolls = await api.get('/learning-programs/my-enrollments');
+      setMyEnrollments(updatedEnrolls);
+      const updatedCurr = updatedEnrolls.find((e) => e.program_id === activePlayerProgram.id);
+      if (updatedCurr) setActiveEnrollment(updatedCurr);
     } catch (err) {
-      toast.error('Error updating progress: ' + err.message);
+      toast.error('Submission failed: ' + err.message);
     } finally {
-      setUpdatingModuleId(null);
+      setSubmittingQuiz(false);
     }
   };
 
-  const handleSubmitModuleQuiz = async (moduleId, questions) => {
-    if (!activePlayerProgram || !activeEnrollment) return;
+  const handleSubmitModuleQuiz = async (moduleId, questionsList) => {
+    if (!activePlayerProgram) return;
 
     const currentAnswers = moduleQuizAnswers[moduleId] || {};
     const answeredCount = Object.keys(currentAnswers).length;
-    if (answeredCount < questions.length) {
-      if (!window.confirm(`You answered ${answeredCount} of ${questions.length} questions for this module quiz. Submit now?`)) {
-        return;
-      }
+    if (answeredCount < questionsList.length) {
+      toast.error(`Please answer all ${questionsList.length} questions for Module ${moduleId} before submitting.`);
+      return;
     }
 
     setSubmittingModuleQuiz(true);
@@ -166,334 +185,239 @@ export function StudentLearningPage() {
       }));
 
       if (res.passed) {
-        toast.success(`🎉 Module ${moduleId} Assessment Passed (${res.score_percent}%)!`);
-        setActiveEnrollment((prev) => ({
-          ...prev,
-          progress_percent: res.progress_percent,
-          completed_modules: JSON.stringify(res.completed_modules),
-          certificate_issued: res.certificate_issued,
-        }));
-        if (res.certificate) {
-          setPreviewCert(res.certificate);
-          toast.success('🏆 All modules passed! Your verified certificate is ready!');
-        }
+        toast.success(`Module ${moduleId} test passed (${res.score_percent}%). Next module unlocked!`);
       } else {
-        toast.error(`Score: ${res.score_percent}%. Passing threshold is ${res.passing_threshold}%. Review the explanations below and retake.`);
+        toast.error(`Module ${moduleId} score: ${res.score_percent}%. Required: ${res.passing_threshold}%. Please retake.`);
       }
 
-      fetchData();
+      await fetchData();
+      const updatedEnrolls = await api.get('/learning-programs/my-enrollments');
+      setMyEnrollments(updatedEnrolls);
+      const updatedCurr = updatedEnrolls.find((e) => e.program_id === activePlayerProgram.id);
+      if (updatedCurr) setActiveEnrollment(updatedCurr);
     } catch (err) {
-      toast.error('Error evaluating module assessment: ' + err.message);
+      toast.error('Module test submission failed: ' + err.message);
     } finally {
       setSubmittingModuleQuiz(false);
     }
   };
 
-  const handleSubmitQuiz = async (e) => {
-    e.preventDefault();
-    if (!activePlayerProgram || !activeEnrollment) return;
-
-    let questions = [];
-    try {
-      questions = JSON.parse(activePlayerProgram.quiz_json || '[]');
-    } catch {}
-
-    const answeredCount = Object.keys(quizAnswers).length;
-    if (answeredCount < questions.length) {
-      if (!window.confirm(`You answered ${answeredCount} of ${questions.length} questions. Are you sure you want to submit?`)) {
-        return;
-      }
-    }
-
-    setSubmittingQuiz(true);
-    try {
-      const res = await api.post(`/learning-programs/${activePlayerProgram.id}/submit-quiz`, {
-        answers: quizAnswers,
-      });
-
-      setQuizResult(res);
-
-      if (res.passed) {
-        toast.success(`🎉 Congratulations! You scored ${res.score_percent}% and passed the certification exam!`);
-        if (res.certificate) {
-          setPreviewCert(res.certificate);
-        }
-      } else {
-        toast.error(`Score: ${res.score_percent}%. Passing threshold is ${res.passing_threshold}%. Review your answers below and retake the exam.`);
-      }
-
-      // Refresh enrollments & program state
-      fetchData();
-    } catch (err) {
-      toast.error('Error submitting exam: ' + err.message);
-    } finally {
-      setSubmittingQuiz(false);
-    }
-  };
-
-  const displayedPrograms = activeTab === 'enrolled'
-    ? programs.filter((p) => p.is_enrolled)
-    : programs;
+  const displayedPrograms =
+    activeTab === 'enrolled'
+      ? programs.filter((p) => myEnrollments.some((e) => e.program_id === p.id))
+      : programs;
 
   return (
-    <PortalLayout title="Learning & Certification Academy" allowedRoles={['student', 'faculty', 'industry', 'institution', 'admin']}>
+    <PortalLayout
+      title="Student Learning & Industry Academy"
+      subtitle="Complete industry-certified curriculums with sequential module assessments and verified credentials"
+      allowedRoles={['student']}
+    >
       {/* ─── Hero Overview Banner ─── */}
       <div
         style={{
-          background: 'linear-gradient(135deg, #1E3A8A 0%, #1E293B 100%)',
+          background: 'linear-gradient(135deg, #0F172A 0%, #1E3A8A 50%, #1E40AF 100%)',
           borderRadius: '16px',
-          padding: '28px 32px',
+          padding: '28px 36px',
           color: '#FFFFFF',
           marginBottom: '24px',
+          boxShadow: '0 8px 24px rgba(30, 58, 138, 0.15)',
           display: 'flex',
-          justifyContent: 'space-between',
           alignItems: 'center',
+          justifyContent: 'space-between',
           flexWrap: 'wrap',
           gap: '20px',
-          boxShadow: '0 10px 25px -5px rgba(30, 58, 138, 0.3)',
         }}
       >
         <div style={{ maxWidth: '640px' }}>
-          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', backgroundColor: 'rgba(56, 189, 248, 0.15)', padding: '4px 12px', borderRadius: '20px', color: '#38BDF8', fontSize: '12px', fontWeight: 700, marginBottom: '10px' }}>
-            <Sparkles size={14} /> RIGOROUS CREDENTIALING & CERTIFICATION SYSTEM
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '4px 12px', borderRadius: '20px', backgroundColor: 'rgba(255, 255, 255, 0.12)', fontSize: '12px', fontWeight: 700, letterSpacing: '0.5px', marginBottom: '12px', color: '#93C5FD' }}>
+            <Sparkles size={14} /> National Enterprise Learning Portal
           </div>
-          <h2 style={{ fontSize: '24px', fontWeight: 800, margin: '0 0 6px 0', letterSpacing: '-0.3px', color: '#FFFFFF' }}>
-            Enterprise Courses & Certification Examinations
+          <h2 style={{ fontSize: '24px', fontWeight: 800, color: '#FFFFFF', margin: '0 0 8px 0', letterSpacing: '-0.3px' }}>
+            Industry-Certified Modular Training & Credentials
           </h2>
-          <p style={{ fontSize: '13.5px', color: '#94A3B8', margin: 0, lineHeight: 1.5 }}>
-            Master job-ready technologies with structured curriculum modules. Pass the final multiple-choice certification exam to earn verified credentials that automatically link to your student portfolio.
+          <p style={{ fontSize: '13.5px', color: '#CBD5E1', lineHeight: 1.6, margin: 0 }}>
+            Read through structured module reading materials, pass each sequential knowledge check to unlock the next module, and complete the final comprehensive exam to earn authentic certificates.
           </p>
         </div>
 
-        {myEnrollments.length > 0 && (
-          <div
-            style={{
-              backgroundColor: 'rgba(255, 255, 255, 0.1)',
-              border: '1px solid rgba(255, 255, 255, 0.15)',
-              borderRadius: '12px',
-              padding: '14px 20px',
-              textAlign: 'center',
-            }}
-          >
-            <div style={{ fontSize: '12px', color: '#93C5FD', fontWeight: 600 }}>My Active Enrollments</div>
-            <div style={{ fontSize: '26px', fontWeight: 800, color: '#FFFFFF', marginTop: '2px' }}>
+        <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
+          <div style={{ backgroundColor: 'rgba(255, 255, 255, 0.08)', borderRadius: '12px', padding: '14px 20px', border: '1px solid rgba(255, 255, 255, 0.12)', minWidth: '120px' }}>
+            <div style={{ fontSize: '22px', fontWeight: 800, color: '#60A5FA' }}>
               {myEnrollments.length}
             </div>
-          </div>
-        )}
-      </div>
-
-      {/* ─── Search & Category Filters Bar ─── */}
-      <div className="card" style={{ marginBottom: '20px', padding: '16px 20px' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '14px' }}>
-          {/* Tabs */}
-          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-            {[
-              { id: 'all', label: 'All Catalog' },
-              ...(user?.role === 'student' ? [{ id: 'enrolled', label: `My Courses (${myEnrollments.length})` }] : []),
-              { id: 'course', label: 'Certifications' },
-              { id: 'bootcamp', label: 'Bootcamps' },
-              { id: 'workshop', label: 'Workshops' },
-              { id: 'fdp', label: 'Faculty FDPs' },
-            ].map((tab) => (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                style={{
-                  padding: '7px 14px',
-                  borderRadius: '8px',
-                  border: activeTab === tab.id ? '1px solid #2563EB' : '1px solid #E2E8F0',
-                  backgroundColor: activeTab === tab.id ? '#EFF6FF' : '#FFFFFF',
-                  color: activeTab === tab.id ? '#1D4ED8' : '#64748B',
-                  fontWeight: activeTab === tab.id ? 700 : 500,
-                  fontSize: '13px',
-                  cursor: 'pointer',
-                  transition: 'all 0.15s',
-                }}
-              >
-                {tab.label}
-              </button>
-            ))}
-          </div>
-
-          {/* Search */}
-          <form onSubmit={handleSearchSubmit} style={{ display: 'flex', gap: '8px' }}>
-            <div style={{ position: 'relative' }}>
-              <Search size={14} color="#94A3B8" style={{ position: 'absolute', left: '10px', top: '11px' }} />
-              <input
-                type="text"
-                placeholder="Search skills or programs..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                style={{
-                  padding: '8px 12px 8px 32px',
-                  borderRadius: '8px',
-                  border: '1px solid #CBD5E1',
-                  fontSize: '13px',
-                  width: '220px',
-                }}
-              />
+            <div style={{ fontSize: '11.5px', color: '#94A3B8', fontWeight: 600, marginTop: '2px' }}>
+              Enrolled Programs
             </div>
-            <button type="submit" className="btn btn-secondary btn-sm">
-              Search
-            </button>
-          </form>
+          </div>
+          <div style={{ backgroundColor: 'rgba(255, 255, 255, 0.08)', borderRadius: '12px', padding: '14px 20px', border: '1px solid rgba(255, 255, 255, 0.12)', minWidth: '120px' }}>
+            <div style={{ fontSize: '22px', fontWeight: 800, color: '#4ADE80' }}>
+              {myEnrollments.filter((e) => e.status === 'completed' || e.certificate_issued).length}
+            </div>
+            <div style={{ fontSize: '11.5px', color: '#94A3B8', fontWeight: 600, marginTop: '2px' }}>
+              Certificates Earned
+            </div>
+          </div>
         </div>
       </div>
 
-      {/* ─── Programs Cards Grid ─── */}
-      {loading ? (
-        <LoadingSpinner message="Loading learning catalog & progress..." />
-      ) : displayedPrograms.length === 0 ? (
-        <div className="card" style={{ padding: '48px 24px', textAlign: 'center' }}>
-          <div style={{ width: '56px', height: '56px', borderRadius: '50%', backgroundColor: '#EFF6FF', color: '#2563EB', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
-            <BookOpen size={26} />
+      {/* ─── Filtering & Search Bar ─── */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px', marginBottom: '20px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+          {[
+            { id: 'all', label: 'All Curriculums' },
+            { id: 'enrolled', label: `My Enrolled (${myEnrollments.length})` },
+            { id: 'course', label: 'Certification Courses' },
+            { id: 'workshop', label: 'Workshops' },
+            { id: 'bootcamp', label: 'Bootcamps' },
+          ].map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              style={{
+                padding: '8px 16px',
+                borderRadius: '8px',
+                border: activeTab === tab.id ? '1px solid #2563EB' : '1px solid #E2E8F0',
+                backgroundColor: activeTab === tab.id ? '#EFF6FF' : '#FFFFFF',
+                color: activeTab === tab.id ? '#1D4ED8' : '#64748B',
+                fontWeight: activeTab === tab.id ? 700 : 500,
+                fontSize: '13px',
+                cursor: 'pointer',
+                transition: 'all 0.15s ease',
+              }}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+
+        <form onSubmit={handleSearchSubmit} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <div style={{ position: 'relative', width: '240px' }}>
+            <Search size={15} color="#94A3B8" style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)' }} />
+            <input
+              type="text"
+              placeholder="Search skills, titles..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              style={{
+                width: '100%',
+                padding: '8px 12px 8px 32px',
+                borderRadius: '8px',
+                border: '1px solid #CBD5E1',
+                fontSize: '13px',
+                boxSizing: 'border-box',
+              }}
+            />
           </div>
-          <h4 style={{ fontSize: '16px', fontWeight: 700, color: '#0F172A', margin: '0 0 6px' }}>
-            {activeTab === 'enrolled' ? 'No enrolled programs yet' : 'No training programs found'}
-          </h4>
-          <p style={{ fontSize: '13px', color: '#64748B', maxWidth: '420px', margin: '0 auto' }}>
-            {activeTab === 'enrolled'
-              ? 'Browse the catalog above and enroll in free enterprise certifications.'
-              : 'Try adjusting your search criteria or filter tags.'}
+          <button type="submit" className="btn btn-secondary btn-sm" style={{ padding: '8px 14px' }}>
+            Filter
+          </button>
+        </form>
+      </div>
+
+      {/* ─── Programs Grid ─── */}
+      {loading ? (
+        <LoadingSpinner message="Loading course marketplace..." />
+      ) : displayedPrograms.length === 0 ? (
+        <div style={{ textAlign: 'center', padding: '48px 20px', backgroundColor: '#FFFFFF', borderRadius: '12px', border: '1px solid #E2E8F0' }}>
+          <div style={{ width: '48px', height: '48px', borderRadius: '50%', backgroundColor: '#EFF6FF', color: '#2563EB', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 12px' }}>
+            <BookOpen size={24} />
+          </div>
+          <h3 style={{ margin: '0 0 6px 0', fontSize: '16px', fontWeight: 800, color: '#0F172A' }}>
+            No Programs Available
+          </h3>
+          <p style={{ margin: 0, fontSize: '13px', color: '#64748B' }}>
+            Check back later as enterprise partners publish new industry certifications.
           </p>
         </div>
       ) : (
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 340px), 1fr))',
-            gap: '20px',
-          }}
-        >
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '20px' }}>
           {displayedPrograms.map((prog) => {
-            let modulesList = [];
-            try {
-              modulesList = JSON.parse(prog.modules_json || '[]');
-            } catch {}
+            const enrollment = myEnrollments.find((e) => e.program_id === prog.id);
+            const isEnrolled = Boolean(enrollment);
+            const isCertified = enrollment?.certificate_issued || enrollment?.status === 'completed';
 
-            let quizList = [];
+            let moduleCount = 0;
             try {
-              quizList = JSON.parse(prog.quiz_json || '[]');
+              moduleCount = JSON.parse(prog.modules_json || '[]').length;
             } catch {}
-
-            const isCertified = prog.my_status === 'completed' || prog.my_quiz_passed;
 
             return (
               <div
                 key={prog.id}
-                className="card"
                 style={{
+                  backgroundColor: '#FFFFFF',
+                  borderRadius: '14px',
+                  border: isCertified ? '1.5px solid #86EFAC' : isEnrolled ? '1.5px solid #93C5FD' : '1px solid #E2E8F0',
+                  padding: '22px',
                   display: 'flex',
                   flexDirection: 'column',
                   justifyContent: 'space-between',
-                  borderRadius: '14px',
-                  border: prog.is_enrolled ? '1.5px solid #93C5FD' : '1px solid #E2E8F0',
-                  boxShadow: '0 4px 15px rgba(0, 0, 0, 0.03)',
-                  transition: 'transform 0.15s, box-shadow 0.15s',
+                  boxShadow: '0 2px 10px rgba(0, 0, 0, 0.03)',
+                  position: 'relative',
                 }}
               >
                 <div>
-                  {/* Card Header & Provider */}
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <div
-                        style={{
-                          width: '36px',
-                          height: '36px',
-                          borderRadius: '8px',
-                          backgroundColor: '#EFF6FF',
-                          color: '#2563EB',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                        }}
-                      >
-                        <Building2 size={18} />
-                      </div>
-                      <div>
-                        <div style={{ fontSize: '12.5px', fontWeight: 700, color: '#0F172A' }}>
-                          {prog.provider_name}
-                        </div>
-                        <div style={{ fontSize: '11px', color: '#64748B' }}>Verified Industry Partner</div>
-                      </div>
-                    </div>
-
-                    <span className="badge badge-primary" style={{ textTransform: 'capitalize', fontSize: '11px' }}>
+                  {/* Card Header Badges */}
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
+                    <span style={{ fontSize: '11px', fontWeight: 700, padding: '3px 8px', borderRadius: '6px', backgroundColor: '#EFF6FF', color: '#1D4ED8', textTransform: 'capitalize' }}>
                       {prog.program_type}
                     </span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      {isCertified ? (
+                        <span style={{ fontSize: '11px', fontWeight: 700, color: '#059669', backgroundColor: '#ECFDF5', border: '1px solid #A7F3D0', padding: '2px 8px', borderRadius: '4px', display: 'flex', alignItems: 'center', gap: '3px' }}>
+                          <CheckCircle2 size={12} /> Certified
+                        </span>
+                      ) : isEnrolled ? (
+                        <span style={{ fontSize: '11px', fontWeight: 700, color: '#2563EB', backgroundColor: '#EFF6FF', border: '1px solid #BFDBFE', padding: '2px 8px', borderRadius: '4px' }}>
+                          In Progress ({enrollment?.progress_percent || 0}%)
+                        </span>
+                      ) : null}
+                    </div>
                   </div>
 
-                  {/* Title & Description */}
-                  <h3 style={{ fontSize: '16px', fontWeight: 800, color: '#0F172A', margin: '0 0 8px 0', lineHeight: 1.35 }}>
+                  <h3 style={{ fontSize: '16px', fontWeight: 800, color: '#0F172A', margin: '0 0 6px 0', lineHeight: 1.3 }}>
                     {prog.title}
                   </h3>
-                  <p style={{ fontSize: '13px', color: '#475569', lineHeight: 1.5, margin: '0 0 14px 0', display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12.5px', color: '#475569', marginBottom: '12px' }}>
+                    <Building2 size={14} color="#64748B" />
+                    <span>{prog.provider_name}</span>
+                  </div>
+
+                  <p style={{ fontSize: '13px', color: '#64748B', lineHeight: 1.5, margin: '0 0 16px 0', display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
                     {prog.description}
                   </p>
 
-                  {/* Metadata Chips */}
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '14px' }}>
-                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '11.5px', color: '#475569', backgroundColor: '#F1F5F9', padding: '3px 8px', borderRadius: '6px' }}>
-                      <Clock size={12} /> {prog.duration || '4 Weeks'}
-                    </span>
-                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '11.5px', color: '#475569', backgroundColor: '#F1F5F9', padding: '3px 8px', borderRadius: '6px' }}>
-                      <Layers size={12} /> {modulesList.length || 4} Modules
-                    </span>
-                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '11.5px', color: '#1D4ED8', backgroundColor: '#EFF6FF', padding: '3px 8px', borderRadius: '6px', fontWeight: 600 }}>
-                      <HelpCircle size={12} /> Exam: {prog.passing_score || 60}% Pass Mark
-                    </span>
-                  </div>
-
                   {/* Skills tags */}
                   {prog.skills_covered && (
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginBottom: '16px' }}>
-                      {prog.skills_covered.split(',').slice(0, 3).map((s, idx) => (
-                        <span key={idx} style={{ fontSize: '11px', color: '#1D4ED8', backgroundColor: '#EFF6FF', padding: '2px 7px', borderRadius: '4px', fontWeight: 500 }}>
-                          {s.trim()}
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '5px', marginBottom: '16px' }}>
+                      {prog.skills_covered.split(',').slice(0, 4).map((skill, sIdx) => (
+                        <span key={sIdx} style={{ fontSize: '11px', backgroundColor: '#F1F5F9', color: '#334155', padding: '2px 7px', borderRadius: '4px', fontWeight: 500 }}>
+                          {skill.trim()}
                         </span>
                       ))}
                     </div>
                   )}
-
-                  {/* If Enrolled: Show Progress Bar & Exam Status */}
-                  {prog.is_enrolled && (
-                    <div style={{ backgroundColor: '#F8FAFC', padding: '10px 12px', borderRadius: '8px', marginBottom: '16px', border: '1px solid #E2E8F0' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', fontWeight: 700, marginBottom: '6px' }}>
-                        <span style={{ color: '#0F172A' }}>My Progress</span>
-                        <span style={{ color: prog.my_progress >= 100 ? '#10B981' : '#2563EB' }}>
-                          {prog.my_progress || 0}%
-                        </span>
-                      </div>
-                      <div style={{ height: '6px', backgroundColor: '#E2E8F0', borderRadius: '6px', overflow: 'hidden', marginBottom: '6px' }}>
-                        <div
-                          style={{
-                            height: '100%',
-                            width: `${prog.my_progress || 0}%`,
-                            backgroundColor: prog.my_progress >= 100 ? '#10B981' : '#2563EB',
-                            borderRadius: '6px',
-                          }}
-                        />
-                      </div>
-                      <div style={{ fontSize: '11px', color: prog.my_quiz_passed ? '#047857' : '#64748B', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                        {prog.my_quiz_passed ? (
-                          <><CheckCircle2 size={12} color="#10B981" /> Exam Passed ({prog.my_quiz_score}%)</>
-                        ) : (
-                          <><HelpCircle size={12} /> Certification Exam Required</>
-                        )}
-                      </div>
-                    </div>
-                  )}
                 </div>
 
-                {/* Card Footer Actions */}
-                <div style={{ paddingTop: '12px', borderTop: '1px solid #F1F5F9', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <div style={{ fontSize: '12.5px', fontWeight: 700, color: '#059669' }}>
-                    {prog.fee_amount > 0 ? `₹${prog.fee_amount}` : 'Free Access'}
+                <div>
+                  {/* Meta metrics row */}
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '12px', color: '#64748B', borderTop: '1px solid #F1F5F9', paddingTop: '12px', marginBottom: '14px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <Clock size={13} /> {prog.duration || 'Self-Paced'}
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <Layers size={13} /> {moduleCount} Modules
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontWeight: 600, color: '#2563EB' }}>
+                      Pass: {prog.passing_score || 60}%
+                    </div>
                   </div>
 
-                  {prog.is_enrolled ? (
-                    <div style={{ display: 'flex', gap: '6px' }}>
+                  {/* Action Buttons */}
+                  {isEnrolled ? (
+                    <div style={{ display: 'flex', gap: '8px' }}>
                       {isCertified && prog.my_verification_hash && (
                         <button
                           onClick={() =>
@@ -516,22 +440,22 @@ export function StudentLearningPage() {
                       <button
                         onClick={() => handleOpenPlayer(prog)}
                         className="btn btn-primary btn-sm"
-                        style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                        style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', flex: 1, justifyContent: 'center' }}
                       >
-                        <PlayCircle size={13} /> {isCertified ? 'Review Course' : 'Study & Take Exam'}
+                        <PlayCircle size={13} /> {isCertified ? 'Review Curriculum' : 'Study & Pass Modules'}
                       </button>
                     </div>
                   ) : user?.role === 'student' ? (
                     <button
                       onClick={() => handleEnroll(prog)}
                       className="btn btn-primary btn-sm"
-                      style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}
+                      style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', width: '100%', justifyContent: 'center' }}
                     >
-                      <GraduationCap size={14} /> Enroll Now
+                      <GraduationCap size={14} /> Enroll in Program
                     </button>
                   ) : (
-                    <button onClick={() => handleOpenPlayer(prog)} className="btn btn-secondary btn-sm">
-                      View Syllabus & Exam
+                    <button onClick={() => handleOpenPlayer(prog)} className="btn btn-secondary btn-sm" style={{ width: '100%' }}>
+                      View Curriculum
                     </button>
                   )}
                 </div>
@@ -541,7 +465,7 @@ export function StudentLearningPage() {
         </div>
       )}
 
-      {/* ─── Interactive E-Learning Player & Exam Modal ─── */}
+      {/* ─── Interactive E-Learning Player, Reading Content & Sequential Assessment Modal ─── */}
       {activePlayerProgram && (
         <div
           style={{
@@ -564,15 +488,15 @@ export function StudentLearningPage() {
               backgroundColor: '#FFFFFF',
               borderRadius: '16px',
               width: '100%',
-              maxWidth: '1000px',
-              height: '90vh',
+              maxWidth: '1060px',
+              height: '92vh',
               boxShadow: '0 25px 60px -15px rgba(0, 0, 0, 0.4)',
               overflow: 'hidden',
               display: 'flex',
               flexDirection: 'column',
             }}
           >
-            {/* Player Top Navigation */}
+            {/* Player Top Navigation Bar */}
             <div
               style={{
                 padding: '16px 24px',
@@ -593,7 +517,7 @@ export function StudentLearningPage() {
                     {activePlayerProgram.title}
                   </h3>
                   <div style={{ fontSize: '12px', color: '#94A3B8' }}>
-                    Conducted by {activePlayerProgram.provider_name} &bull; Passing Mark: {activePlayerProgram.passing_score || 60}%
+                    Conducted by {activePlayerProgram.provider_name} &bull; Passing Threshold: {activePlayerProgram.passing_score || 60}%
                   </div>
                 </div>
               </div>
@@ -638,6 +562,7 @@ export function StudentLearningPage() {
               const currentModule = !isViewingQuiz ? (parsedModules[selectedModuleIndex] || parsedModules[0]) : null;
               const completedModulesList = activeEnrollment ? JSON.parse(activeEnrollment.completed_modules || '[]') : [];
               const isCurrentCompleted = currentModule ? completedModulesList.includes(currentModule.id) : false;
+              const allModulesCompleted = parsedModules.length > 0 && parsedModules.every((m) => completedModulesList.includes(m.id));
 
               return (
                 <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
@@ -652,20 +577,30 @@ export function StudentLearningPage() {
                       overflowY: 'auto',
                     }}
                   >
-                    <div style={{ padding: '16px 20px', borderBottom: '1px solid #E2E8F0', fontSize: '13px', fontWeight: 700, color: '#0F172A' }}>
-                      Course Syllabus & Exam
+                    <div style={{ padding: '16px 20px', borderBottom: '1px solid #E2E8F0', fontSize: '13px', fontWeight: 700, color: '#0F172A', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <span>Curriculum & Progression</span>
+                      <span style={{ fontSize: '11.5px', color: '#64748B', fontWeight: 600 }}>
+                        {completedModulesList.length}/{parsedModules.length} Done
+                      </span>
                     </div>
 
                     <div style={{ display: 'flex', flexDirection: 'column', padding: '10px' }}>
-                      {/* Modules list */}
+                      {/* Sequential Modules List */}
                       {parsedModules.map((m, idx) => {
                         const isDone = completedModulesList.includes(m.id);
                         const isSelected = selectedModuleIndex === idx;
+                        const isUnlocked = idx === 0 || completedModulesList.includes(parsedModules[idx - 1].id);
 
                         return (
                           <div
                             key={m.id || idx}
-                            onClick={() => setSelectedModuleIndex(idx)}
+                            onClick={() => {
+                              if (isUnlocked) {
+                                setSelectedModuleIndex(idx);
+                              } else {
+                                toast.error(`Module ${idx + 1} is locked. Complete and pass the assessment for Module ${idx} first.`);
+                              }
+                            }}
                             style={{
                               padding: '12px 14px',
                               borderRadius: '8px',
@@ -674,7 +609,8 @@ export function StudentLearningPage() {
                               display: 'flex',
                               alignItems: 'center',
                               justifyContent: 'space-between',
-                              cursor: 'pointer',
+                              cursor: isUnlocked ? 'pointer' : 'not-allowed',
+                              opacity: isUnlocked ? 1 : 0.6,
                               marginBottom: '4px',
                               transition: 'all 0.15s',
                             }}
@@ -685,7 +621,7 @@ export function StudentLearningPage() {
                                   width: '24px',
                                   height: '24px',
                                   borderRadius: '50%',
-                                  backgroundColor: isDone ? '#10B981' : isSelected ? '#2563EB' : '#E2E8F0',
+                                  backgroundColor: isDone ? '#10B981' : isUnlocked ? (isSelected ? '#2563EB' : '#94A3B8') : '#CBD5E1',
                                   color: '#FFFFFF',
                                   display: 'flex',
                                   alignItems: 'center',
@@ -694,18 +630,22 @@ export function StudentLearningPage() {
                                   fontWeight: 700,
                                 }}
                               >
-                                {isDone ? <Check size={13} strokeWidth={3} /> : idx + 1}
+                                {isDone ? <Check size={13} strokeWidth={3} /> : isUnlocked ? idx + 1 : <Lock size={11} />}
                               </div>
                               <div>
-                                <div style={{ fontSize: '13px', fontWeight: isSelected ? 700 : 500, color: isSelected ? '#1D4ED8' : '#1E293B' }}>
+                                <div style={{ fontSize: '13px', fontWeight: isSelected ? 700 : 500, color: isSelected ? '#1D4ED8' : isUnlocked ? '#1E293B' : '#94A3B8' }}>
                                   {m.title}
                                 </div>
                                 <div style={{ fontSize: '11.5px', color: '#64748B' }}>
-                                  {m.duration || '1.5 Hours'}
+                                  {m.duration || '2 Hours'} &bull; {isDone ? 'Passed' : isUnlocked ? 'Unlocked' : 'Locked'}
                                 </div>
                               </div>
                             </div>
-                            <ChevronRight size={14} color={isSelected ? '#2563EB' : '#CBD5E1'} />
+                            {isUnlocked ? (
+                              <ChevronRight size={14} color={isSelected ? '#2563EB' : '#CBD5E1'} />
+                            ) : (
+                              <Lock size={13} color="#94A3B8" />
+                            )}
                           </div>
                         );
                       })}
@@ -713,17 +653,24 @@ export function StudentLearningPage() {
                       {/* Final Certification Exam Milestone Button */}
                       {parsedQuiz.length > 0 && (
                         <div
-                          onClick={() => setSelectedModuleIndex('quiz')}
+                          onClick={() => {
+                            if (allModulesCompleted) {
+                              setSelectedModuleIndex('quiz');
+                            } else {
+                              toast.error(`Complete and pass all ${parsedModules.length} modules to unlock the final certification exam.`);
+                            }
+                          }}
                           style={{
                             padding: '14px 14px',
                             borderRadius: '10px',
-                            backgroundColor: isViewingQuiz ? '#FEF3C7' : '#FFFFFF',
-                            border: isViewingQuiz ? '1.5px solid #F59E0B' : '1px solid #E2E8F0',
+                            backgroundColor: isViewingQuiz ? '#FEF3C7' : allModulesCompleted ? '#EFF6FF' : '#F1F5F9',
+                            border: isViewingQuiz ? '1.5px solid #F59E0B' : allModulesCompleted ? '1px solid #BFDBFE' : '1px solid #E2E8F0',
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'space-between',
-                            cursor: 'pointer',
-                            marginTop: '10px',
+                            cursor: allModulesCompleted ? 'pointer' : 'not-allowed',
+                            opacity: allModulesCompleted ? 1 : 0.65,
+                            marginTop: '12px',
                             boxShadow: '0 2px 6px rgba(0, 0, 0, 0.04)',
                           }}
                         >
@@ -733,27 +680,33 @@ export function StudentLearningPage() {
                                 width: '28px',
                                 height: '28px',
                                 borderRadius: '50%',
-                                backgroundColor: activeEnrollment?.quiz_passed ? '#10B981' : '#F59E0B',
+                                backgroundColor: activeEnrollment?.quiz_passed ? '#10B981' : allModulesCompleted ? '#F59E0B' : '#94A3B8',
                                 color: '#FFFFFF',
                                 display: 'flex',
                                 alignItems: 'center',
                                 justifyContent: 'center',
                               }}
                             >
-                              <Award size={15} />
+                              {activeEnrollment?.quiz_passed ? <Check size={14} strokeWidth={3} /> : allModulesCompleted ? <Award size={15} /> : <Lock size={13} />}
                             </div>
                             <div>
-                              <div style={{ fontSize: '13px', fontWeight: 800, color: '#92400E' }}>
-                                Certification Exam
+                              <div style={{ fontSize: '13px', fontWeight: 800, color: allModulesCompleted ? (isViewingQuiz ? '#92400E' : '#1E293B') : '#64748B' }}>
+                                Final Certification Exam
                               </div>
-                              <div style={{ fontSize: '11px', color: '#78350F' }}>
+                              <div style={{ fontSize: '11px', color: allModulesCompleted ? '#78350F' : '#94A3B8' }}>
                                 {activeEnrollment?.quiz_passed
                                   ? `Passed (${activeEnrollment?.quiz_score}%)`
-                                  : `${parsedQuiz.length} MCQs &bull; Pass Mark: ${activePlayerProgram.passing_score || 60}%`}
+                                  : allModulesCompleted
+                                  ? `Unlocked &bull; Pass: ${activePlayerProgram.passing_score || 60}%`
+                                  : `Locked (Finish All Modules)`}
                               </div>
                             </div>
                           </div>
-                          <ChevronRight size={14} color="#D97706" />
+                          {allModulesCompleted ? (
+                            <ChevronRight size={14} color="#D97706" />
+                          ) : (
+                            <Lock size={14} color="#94A3B8" />
+                          )}
                         </div>
                       )}
                     </div>
@@ -762,7 +715,7 @@ export function StudentLearningPage() {
                   {/* Right Main Content Panel */}
                   <div style={{ flex: 1, padding: '32px 36px', overflowY: 'auto', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
                     {isViewingQuiz ? (
-                      /* ─── Certification Examination Screen ─── */
+                      /* ─── Final Certification Examination Screen ─── */
                       <div>
                         {/* Exam Header Banner */}
                         <div
@@ -781,20 +734,20 @@ export function StudentLearningPage() {
                         >
                           <div>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#92400E', fontWeight: 800, fontSize: '15px' }}>
-                              <Award size={18} color="#D97706" /> Final Certification Examination
+                              <Award size={18} color="#D97706" /> Final Comprehensive Certification Exam
                             </div>
                             <div style={{ fontSize: '12.5px', color: '#78350F', marginTop: '3px' }}>
-                              Answer all questions and achieve at least <strong>{activePlayerProgram.passing_score || 60}%</strong> to unlock and receive your verified certificate.
+                              Comprehensive assessment spanning all course modules. Achieve at least <strong>{activePlayerProgram.passing_score || 60}%</strong> to earn your verified certificate.
                             </div>
                           </div>
                           {activeEnrollment?.quiz_passed && (
-                            <span style={{ backgroundColor: '#10B981', color: '#FFFFFF', fontWeight: 700, fontSize: '12px', padding: '4px 10px', borderRadius: '6px' }}>
-                              ✓ Credential Earned
+                            <span style={{ backgroundColor: '#10B981', color: '#FFFFFF', fontWeight: 700, fontSize: '12px', padding: '4px 10px', borderRadius: '6px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                              <CheckCircle2 size={13} /> Credential Earned
                             </span>
                           )}
                         </div>
 
-                        {/* If Quiz Result is available: Show Score Card */}
+                        {/* Quiz Result Feedback Card */}
                         {quizResult && (
                           <div
                             style={{
@@ -823,7 +776,7 @@ export function StudentLearningPage() {
                                 </div>
                                 <div>
                                   <h3 style={{ margin: 0, fontSize: '17px', fontWeight: 800, color: quizResult.passed ? '#065F46' : '#991B1B' }}>
-                                    {quizResult.passed ? 'Assessment Passed! Certificate Awarded' : 'Assessment Not Passed'}
+                                    {quizResult.passed ? 'Final Exam Passed! Official Certificate Awarded' : 'Score Below Passing Threshold'}
                                   </h3>
                                   <p style={{ margin: '2px 0 0', fontSize: '13px', color: quizResult.passed ? '#047857' : '#B91C1C' }}>
                                     Your Score: <strong>{quizResult.score_percent}%</strong> ({quizResult.correct_count}/{quizResult.total_questions} correct) &bull; Required Pass Mark: {quizResult.passing_threshold}%
@@ -848,7 +801,7 @@ export function StudentLearningPage() {
                                   className="btn btn-primary btn-sm"
                                   style={{ backgroundColor: '#059669', borderColor: '#059669', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
                                 >
-                                  <Award size={15} /> View & Download Certificate
+                                  <Award size={15} /> View Verified Certificate
                                 </button>
                               ) : (
                                 <button
@@ -860,7 +813,7 @@ export function StudentLearningPage() {
                                   className="btn btn-primary btn-sm"
                                   style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
                                 >
-                                  <RotateCcw size={14} /> Retake Assessment
+                                  <RotateCcw size={14} /> Retake Final Exam
                                 </button>
                               )}
                             </div>
@@ -987,93 +940,104 @@ export function StudentLearningPage() {
                                 style={{ padding: '11px 28px', fontSize: '14px', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '8px' }}
                               >
                                 <Award size={16} />
-                                {submittingQuiz ? 'Grading Answers...' : 'Submit Certification Exam'}
+                                {submittingQuiz ? 'Grading Final Answers...' : 'Submit Final Certification Exam'}
                               </button>
                             </div>
                           )}
                         </form>
                       </div>
                     ) : (
-                      /* ─── Regular Module Reader Screen ─── */
+                      /* ─── Regular Module Reading & Module Test Screen ─── */
                       <div>
-                        {/* Module Header */}
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-                          <span className="badge badge-primary" style={{ fontSize: '11.5px' }}>
-                            Module {selectedModuleIndex + 1} of {parsedModules.length}
-                          </span>
-                          <span style={{ fontSize: '12.5px', color: '#64748B' }}>
-                            Estimated Time: {currentModule.duration || '2 Hours'}
-                          </span>
+                        {/* Module Header Badge */}
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <span className="badge badge-primary" style={{ fontSize: '11.5px' }}>
+                              Module {selectedModuleIndex + 1} of {parsedModules.length}
+                            </span>
+                            <span style={{ fontSize: '12.5px', color: '#64748B' }}>
+                              Estimated Time: {currentModule.duration || '2 Hours'}
+                            </span>
+                          </div>
+                          {isCurrentCompleted && (
+                            <span style={{ backgroundColor: '#ECFDF5', color: '#059669', border: '1px solid #A7F3D0', fontWeight: 700, fontSize: '12px', padding: '3px 9px', borderRadius: '6px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                              <CheckCircle2 size={13} /> Module Completed & Passed
+                            </span>
+                          )}
                         </div>
 
                         <h2 style={{ fontSize: '22px', fontWeight: 800, color: '#0F172A', margin: '0 0 12px 0' }}>
                           {currentModule.title}
                         </h2>
 
-                        <p style={{ fontSize: '14.5px', color: '#334155', lineHeight: 1.6, margin: '0 0 24px 0' }}>
+                        <p style={{ fontSize: '14.5px', color: '#334155', lineHeight: 1.6, margin: '0 0 20px 0' }}>
                           {currentModule.description}
                         </p>
 
-                        {/* Topics / Syllabus items */}
-                        {currentModule.topics && (
-                          <div style={{ backgroundColor: '#F8FAFC', borderRadius: '12px', padding: '18px 20px', border: '1px solid #E2E8F0', marginBottom: '24px' }}>
-                            <h4 style={{ margin: '0 0 10px 0', fontSize: '13.5px', fontWeight: 700, color: '#0F172A' }}>
-                              Core Learning Objectives & Topics:
-                            </h4>
-                            <ul style={{ margin: 0, paddingLeft: '20px', fontSize: '13.5px', color: '#475569', lineHeight: 1.7 }}>
-                              {currentModule.topics.map((t, i) => (
-                                <li key={i}>{t}</li>
-                              ))}
-                            </ul>
+                        {/* Module Learning Content & In-Depth Reading Material */}
+                        <div style={{ backgroundColor: '#FFFFFF', borderRadius: '12px', border: '1px solid #E2E8F0', padding: '24px', marginBottom: '24px', boxShadow: '0 1px 4px rgba(0,0,0,0.02)' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14px', fontWeight: 800, color: '#0F172A', marginBottom: '14px', borderBottom: '1px solid #EEF2F6', paddingBottom: '10px' }}>
+                            <BookMarked size={17} color="#2563EB" /> Module Study & Reading Material
                           </div>
-                        )}
 
-                        {/* External resource / Video Link if available */}
-                        {activePlayerProgram.external_link && (
-                          <div style={{ backgroundColor: '#EFF6FF', borderRadius: '10px', padding: '14px 18px', border: '1px solid #BFDBFE', display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                              <ExternalLink size={18} color="#2563EB" />
+                          {currentModule.content ? (
+                            <MarkdownRenderer content={currentModule.content} />
+                          ) : (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', fontSize: '14px', color: '#334155', lineHeight: 1.7 }}>
                               <div>
-                                <div style={{ fontSize: '13px', fontWeight: 700, color: '#1E293B' }}>
-                                  Supplemental Lab Materials & Repository
+                                <h4 style={{ margin: '0 0 6px 0', fontSize: '14px', fontWeight: 700, color: '#0F172A' }}>
+                                  1. Architectural Overview & Foundations
+                                </h4>
+                                <p style={{ margin: 0, color: '#475569' }}>
+                                  {currentModule.description} Understanding foundational design patterns, loose coupling, and defensive programming ensures high throughput and maintainability across distributed production microservices.
+                                </p>
+                              </div>
+
+                              {currentModule.topics && currentModule.topics.length > 0 && (
+                                <div>
+                                  <h4 style={{ margin: '0 0 6px 0', fontSize: '14px', fontWeight: 700, color: '#0F172A' }}>
+                                    2. Core Learning Objectives & Technical Focus
+                                  </h4>
+                                  <ul style={{ margin: 0, paddingLeft: '20px', color: '#475569' }}>
+                                    {currentModule.topics.map((t, tIdx) => (
+                                      <li key={tIdx}>{t}</li>
+                                    ))}
+                                  </ul>
                                 </div>
-                                <div style={{ fontSize: '11.5px', color: '#64748B' }}>
-                                  Access live course assets on partner portal
-                                </div>
+                              )}
+
+                              <div>
+                                <h4 style={{ margin: '0 0 6px 0', fontSize: '14px', fontWeight: 700, color: '#0F172A' }}>
+                                  3. Key Industry Best Practices
+                                </h4>
+                                <p style={{ margin: 0, color: '#475569' }}>
+                                  Enforce schema validation on incoming payloads, implement structured logging for observability, isolate sensitive secrets using environment configuration, and write unit tests to prevent regressions.
+                                </p>
                               </div>
                             </div>
-                            <a
-                              href={activePlayerProgram.external_link}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="btn btn-primary btn-sm"
-                              style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}
-                            >
-                              Open Resources <ExternalLink size={12} />
-                            </a>
-                          </div>
-                        )}
+                          )}
+                        </div>
 
                         {/* Per-Module Assessment Quiz */}
                         {currentModule.quiz && currentModule.quiz.length > 0 && (
-                          <div style={{ marginTop: '28px', borderTop: '1.5px solid #E2E8F0', paddingTop: '24px' }}>
+                          <div style={{ marginTop: '24px', borderTop: '1.5px solid #E2E8F0', paddingTop: '24px' }}>
                             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
                               <div>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '15px', fontWeight: 800, color: '#0F172A' }}>
-                                  <HelpCircle size={18} color="#2563EB" /> Module {selectedModuleIndex + 1} Assessment & Knowledge Check
+                                  <HelpCircle size={18} color="#2563EB" /> Module {selectedModuleIndex + 1} Knowledge Assessment
                                 </div>
                                 <div style={{ fontSize: '12px', color: '#64748B', marginTop: '2px' }}>
-                                  Score &ge; {activePlayerProgram.passing_score || 60}% to pass this module and earn completion credit.
+                                  Score &ge; {activePlayerProgram.passing_score || 60}% on this test to pass and unlock the next module.
                                 </div>
                               </div>
                               {isCurrentCompleted && (
                                 <span style={{ backgroundColor: '#ECFDF5', color: '#059669', border: '1px solid #A7F3D0', fontWeight: 700, fontSize: '12px', padding: '4px 10px', borderRadius: '6px', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                  <Check size={14} /> Module Passed
+                                  <Check size={14} /> Passed
                                 </span>
                               )}
                             </div>
 
-                            {/* Module Quiz Results Card if available */}
+                            {/* Module Quiz Feedback Card */}
                             {moduleQuizResult[currentModule.id] && (
                               <div
                                 style={{
@@ -1089,16 +1053,16 @@ export function StudentLearningPage() {
                               >
                                 <div>
                                   <div style={{ fontSize: '13.5px', fontWeight: 800, color: moduleQuizResult[currentModule.id].passed ? '#065F46' : '#991B1B' }}>
-                                    {moduleQuizResult[currentModule.id].passed ? '✓ Module Quiz Passed!' : '✕ Score Below Passing Threshold'}
+                                    {moduleQuizResult[currentModule.id].passed ? 'Module Test Passed! Next Module Unlocked' : 'Score Below Passing Threshold'}
                                   </div>
                                   <div style={{ fontSize: '12px', color: moduleQuizResult[currentModule.id].passed ? '#047857' : '#B91C1C', marginTop: '2px' }}>
-                                    Your Score: {moduleQuizResult[currentModule.id].score_percent}% &bull; Correct: {moduleQuizResult[currentModule.id].correct_count}/{moduleQuizResult[currentModule.id].total_questions}
+                                    Your Score: {moduleQuizResult[currentModule.id].score_percent}% &bull; Correct: {moduleQuizResult[currentModule.id].correct_count}/{moduleQuizResult[currentModule.id].total_questions} (Pass Mark: {moduleQuizResult[currentModule.id].passing_threshold}%)
                                   </div>
                                 </div>
                               </div>
                             )}
 
-                            {/* Questions */}
+                            {/* Module Questions Form */}
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                               {currentModule.quiz.map((q, qIdx) => {
                                 const qidStr = String(q.id || qIdx + 1);
@@ -1198,8 +1162,8 @@ export function StudentLearningPage() {
                                   {submittingModuleQuiz
                                     ? 'Grading Answers...'
                                     : isCurrentCompleted
-                                    ? 'Retake Module Quiz'
-                                    : 'Submit Module Quiz & Pass'}
+                                    ? 'Retake Module Test'
+                                    : 'Submit Module Test'}
                                 </button>
                               </div>
                             )}
@@ -1208,9 +1172,9 @@ export function StudentLearningPage() {
                       </div>
                     )}
 
-                    {/* Completion Action Footer for Modules */}
+                    {/* Sequential Navigation Action Footer */}
                     {!isViewingQuiz && (
-                      <div style={{ paddingTop: '20px', borderTop: '1px solid #E2E8F0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <div style={{ paddingTop: '20px', borderTop: '1px solid #E2E8F0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '24px' }}>
                         <button
                           onClick={() => setSelectedModuleIndex((prev) => Math.max(0, prev - 1))}
                           disabled={selectedModuleIndex === 0}
@@ -1219,51 +1183,37 @@ export function StudentLearningPage() {
                           Previous Module
                         </button>
 
-                        {activeEnrollment ? (
-                          <button
-                            onClick={() => handleToggleModuleComplete(currentModule.id, isCurrentCompleted)}
-                            disabled={updatingModuleId === currentModule.id}
-                            style={{
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              gap: '8px',
-                              padding: '10px 22px',
-                              borderRadius: '8px',
-                              border: 'none',
-                              backgroundColor: isCurrentCompleted ? '#10B981' : '#2563EB',
-                              color: '#FFFFFF',
-                              fontWeight: 700,
-                              fontSize: '13.5px',
-                              cursor: 'pointer',
-                            }}
-                          >
-                            <Check size={16} />
-                            {updatingModuleId === currentModule.id
-                              ? 'Updating...'
-                              : isCurrentCompleted
-                              ? 'Completed (Click to Reopen)'
-                              : 'Mark Module Complete'}
-                          </button>
-                        ) : (
-                          <button onClick={() => handleEnroll(activePlayerProgram)} className="btn btn-primary btn-sm">
-                            Enroll to Track Progress
-                          </button>
-                        )}
-
                         {selectedModuleIndex < parsedModules.length - 1 ? (
                           <button
-                            onClick={() => setSelectedModuleIndex((prev) => prev + 1)}
-                            className="btn btn-outline btn-sm"
+                            onClick={() => {
+                              if (isCurrentCompleted) {
+                                setSelectedModuleIndex((prev) => prev + 1);
+                              } else {
+                                toast.error(`Please pass the test for Module ${selectedModuleIndex + 1} to proceed.`);
+                              }
+                            }}
+                            disabled={!isCurrentCompleted}
+                            className="btn btn-primary btn-sm"
+                            style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
                           >
-                            Next Module
+                            <span>Next Module ({selectedModuleIndex + 2})</span>
+                            <ArrowRight size={14} />
                           </button>
                         ) : (
                           <button
-                            onClick={() => setSelectedModuleIndex('quiz')}
+                            onClick={() => {
+                              if (allModulesCompleted) {
+                                setSelectedModuleIndex('quiz');
+                              } else {
+                                toast.error('Please pass all module tests before attempting the final exam.');
+                              }
+                            }}
+                            disabled={!allModulesCompleted}
                             className="btn btn-primary btn-sm"
-                            style={{ backgroundColor: '#D97706', borderColor: '#D97706', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                            style={{ backgroundColor: '#D97706', borderColor: '#D97706', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
                           >
-                            <Award size={14} /> Take Final Exam
+                            <Award size={14} />
+                            <span>Proceed to Final Certification Exam</span>
                           </button>
                         )}
                       </div>
@@ -1276,10 +1226,12 @@ export function StudentLearningPage() {
         </div>
       )}
 
-      {/* ─── Verified Certificate Viewer Modal ─── */}
-      {previewCert && (
-        <CertificateModal certificate={previewCert} onClose={() => setPreviewCert(null)} />
-      )}
+      {/* ─── Official Certificate Modal ─── */}
+      <CertificateModal
+        certificate={previewCert}
+        isOpen={Boolean(previewCert)}
+        onClose={() => setPreviewCert(null)}
+      />
     </PortalLayout>
   );
 }

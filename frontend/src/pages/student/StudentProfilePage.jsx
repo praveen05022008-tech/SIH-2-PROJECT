@@ -22,7 +22,10 @@ import {
   Code,
   Globe,
   Eye,
-  X
+  X,
+  Target,
+  Search,
+  ArrowRight
 } from 'lucide-react';
 import { ENGINEERING_DEPARTMENTS } from '../../constants/departments';
 import { LoadingSpinner } from '../../components/common/LoadingSpinner';
@@ -1326,8 +1329,8 @@ export function StudentProfilePage() {
                 {/* Quantification Fixes */}
                 {critiqueResult.quantification_fixes?.length > 0 && (
                   <div style={{ marginBottom: '16px' }}>
-                    <h4 style={{ fontSize: '13.5px', color: '#1E293B', marginBottom: '8px', fontWeight: 600 }}>
-                      ⚡ Recommended Bullet Point Quantifications:
+                    <h4 style={{ fontSize: '13.5px', color: '#1E293B', marginBottom: '8px', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <Sparkles size={14} color="#2563EB" /> Recommended Bullet Point Quantifications:
                     </h4>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                       {critiqueResult.quantification_fixes.map((q, idx) => (
@@ -1335,8 +1338,8 @@ export function StudentProfilePage() {
                           <div style={{ color: '#DC2626', textDecoration: 'line-through', marginBottom: '4px' }}>
                             {q.original_phrase}
                           </div>
-                          <div style={{ color: '#16A34A', fontWeight: 600, marginBottom: '2px' }}>
-                            ➜ {q.improved_phrase_suggestion}
+                          <div style={{ color: '#16A34A', fontWeight: 600, marginBottom: '2px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                            <ArrowRight size={12} color="#16A34A" /> {q.improved_phrase_suggestion}
                           </div>
                           <span style={{ fontSize: '11px', color: '#64748B' }}>Why: {q.reason}</span>
                         </div>
@@ -1348,13 +1351,15 @@ export function StudentProfilePage() {
                 {/* Weak Verbs */}
                 {critiqueResult.weak_action_verbs_to_replace?.length > 0 && (
                   <div style={{ marginBottom: '16px' }}>
-                    <h4 style={{ fontSize: '13.5px', color: '#1E293B', marginBottom: '8px', fontWeight: 600 }}>
-                      🔍 Action Verbs to Strengthen:
+                    <h4 style={{ fontSize: '13.5px', color: '#1E293B', marginBottom: '8px', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <Search size={14} color="#D97706" /> Action Verbs to Strengthen:
                     </h4>
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
                       {critiqueResult.weak_action_verbs_to_replace.map((v, idx) => (
-                        <div key={idx} style={{ backgroundColor: '#FFFBEB', border: '1px solid #FDE68A', padding: '8px 10px', borderRadius: '4px', fontSize: '12px' }}>
-                          <span style={{ color: '#B45309', fontWeight: 600 }}>Replace '{v.weak_verb}'</span> ➜ <strong style={{ color: '#15803D' }}>{Array.isArray(v.recommended_action_verbs) ? v.recommended_action_verbs.join(', ') : v.recommended_action_verbs}</strong>
+                        <div key={idx} style={{ backgroundColor: '#FFFBEB', border: '1px solid #FDE68A', padding: '8px 10px', borderRadius: '4px', fontSize: '12px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <span style={{ color: '#B45309', fontWeight: 600 }}>Replace '{v.weak_verb}'</span>
+                          <ArrowRight size={12} color="#B45309" />
+                          <strong style={{ color: '#15803D' }}>{Array.isArray(v.recommended_action_verbs) ? v.recommended_action_verbs.join(', ') : v.recommended_action_verbs}</strong>
                         </div>
                       ))}
                     </div>
@@ -1364,8 +1369,8 @@ export function StudentProfilePage() {
                 {/* Target Keywords */}
                 {critiqueResult.tailored_role_keywords?.length > 0 && (
                   <div>
-                    <h4 style={{ fontSize: '13px', color: '#1E293B', marginBottom: '6px', fontWeight: 600 }}>
-                      🎯 Role Keywords to Include:
+                    <h4 style={{ fontSize: '13px', color: '#1E293B', marginBottom: '6px', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <Target size={14} color="#7C3AED" /> Role Keywords to Include:
                     </h4>
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
                       {critiqueResult.tailored_role_keywords.map((kw, idx) => (

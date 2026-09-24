@@ -233,8 +233,8 @@ export function CertificateVerificationPage() {
                       {cert.designation && cert.institution_name ? ` • ${cert.institution_name}` : cert.institution_name ? `${cert.institution_name}` : cert.student_email}
                     </div>
                     {cert.credits && (
-                      <div style={{ marginTop: '4px', fontSize: '11.5px', color: '#047857', fontWeight: 700 }}>
-                        ★ {cert.credits} FDP / CPE Academic Credits
+                      <div style={{ marginTop: '4px', fontSize: '11.5px', color: '#047857', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        <Award size={13} color="#059669" /> {cert.credits} FDP / CPE Academic Credits
                       </div>
                     )}
                   </div>
