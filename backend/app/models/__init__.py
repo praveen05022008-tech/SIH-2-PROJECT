@@ -5,7 +5,7 @@ from app.models.collaboration import Collaboration
 from app.models.document import Document, DocumentVerification
 from app.models.internship import Internship, InternshipTask, MentorFeedback
 from app.models.issue import IssueReport
-from app.models.learning import LearningProgram
+from app.models.learning import Certificate, LearningProgram, ProgramEnrollment
 from app.models.notification import Notification
 from app.models.opportunity import Application, Opportunity, OpportunitySkill
 from app.models.portfolio import Certification, Portfolio, Project
@@ -41,6 +41,8 @@ __all__ = [
     "Certification",
     "Collaboration",
     "LearningProgram",
+    "ProgramEnrollment",
+    "Certificate",
     "Document",
     "DocumentVerification",
     "Notification",

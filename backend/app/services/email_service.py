@@ -411,5 +411,39 @@ def send_generic_notification_email(
     trigger_background_email(to_email, subject, html)
 
 
+def send_course_certificate_email(
+    to_email: str,
+    student_name: str,
+    course_title: str,
+    provider_name: str,
+    certificate_number: str,
+    verification_hash: str,
+) -> None:
+    """Sent automatically when a student completes a learning/training program and earns a certificate."""
+    subject = f"🎓 Certificate of Completion: {course_title} - {provider_name}"
+    greeting = f"Congratulations {student_name}"
+    main_msg = (
+        f"We are delighted to present you with this official <strong>Certificate of Completion</strong> for "
+        f"successfully finishing the <strong>{course_title}</strong> program conducted by <strong>{provider_name}</strong> "
+        f"via the Academia-Industry Collaboration Platform. Your verified credential has also been automatically added to your public student portfolio!"
+    )
+    details = [
+        ("Course / Initiative", course_title),
+        ("Issuing Enterprise", provider_name),
+        ("Credential ID", certificate_number),
+        ("Verification Status", "Authentic & Verified on National Portal"),
+    ]
+    html = _build_html_template(
+        title="Official Certificate of Achievement",
+        preheader=f"Congratulations! Here is your verified certificate for {course_title}.",
+        greeting=greeting,
+        main_message=main_msg,
+        details_list=details,
+        action_url=f"/verify-certificate/{verification_hash}",
+        action_text="View & Download Verified Certificate",
+    )
+    trigger_background_email(to_email, subject, html)
+
+
 # Aliases for compatibility
 send_application_received_email = send_new_application_received_email

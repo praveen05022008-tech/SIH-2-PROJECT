@@ -70,3 +70,27 @@ def require_approved_user(current_user: User = Depends(get_current_user)) -> Use
             detail="Your account is pending administrator approval. Please wait for approval before accessing portal features.",
         )
     return current_user
+
+
+def get_optional_current_user(
+    token: Optional[str] = Depends(oauth2_scheme),
+    authorization: Optional[str] = Header(None),
+    db: Session = Depends(get_db),
+) -> Optional[User]:
+    auth_token = token
+    if not auth_token and authorization and authorization.startswith("Bearer "):
+        auth_token = authorization.split(" ")[1]
+
+    if not auth_token:
+        return None
+
+    try:
+        payload = decode_access_token(auth_token)
+        if payload is None:
+            return None
+        user_id = payload.get("sub")
+        if user_id is None:
+            return None
+        return db.query(User).filter(User.id == int(user_id)).first()
+    except Exception:
+        return None

@@ -12,6 +12,7 @@ import { AboutPage } from './pages/public/AboutPage';
 import { FeaturesPage } from './pages/public/FeaturesPage';
 import { HowItWorksPage } from './pages/public/HowItWorksPage';
 import { PublicPortfolioPage } from './pages/public/PublicPortfolioPage';
+import { CertificateVerificationPage } from './pages/public/CertificateVerificationPage';
 
 // Student Pages
 
@@ -42,6 +43,7 @@ import { IndustryProfilePage } from './pages/industry/IndustryProfilePage';
 import { PostOpportunityPage } from './pages/industry/PostOpportunityPage';
 import { IndustryApplicationsPage } from './pages/industry/IndustryApplicationsPage';
 import { IndustryMentorshipPage } from './pages/industry/IndustryMentorshipPage';
+import { IndustryLearningPage } from './pages/industry/IndustryLearningPage';
 import { IndustryCollaborationsPage } from './pages/industry/IndustryCollaborationsPage';
 
 // Institution Pages
@@ -77,6 +79,7 @@ export default function App() {
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
           <Route path="/portfolio/:username" element={<PublicPortfolioPage />} />
+          <Route path="/verify-certificate/:hash" element={<CertificateVerificationPage />} />
 
           {/* Role 1: Student Routes */}
           <Route path="/student/dashboard" element={<StudentDashboard />} />
@@ -106,6 +109,7 @@ export default function App() {
           <Route path="/industry/post-opportunity" element={<PostOpportunityPage />} />
           <Route path="/industry/applications" element={<IndustryApplicationsPage />} />
           <Route path="/industry/mentorship" element={<IndustryMentorshipPage />} />
+          <Route path="/industry/learning-programs" element={<IndustryLearningPage />} />
           <Route path="/industry/collaborations" element={<IndustryCollaborationsPage />} />
 
           {/* Role 4: Institution Routes (Separated from Admin!) */}

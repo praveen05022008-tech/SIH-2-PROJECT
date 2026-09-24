@@ -617,3 +617,92 @@ def critique_resume_with_groq(resume_text: str, target_role: Optional[str] = Non
             "tailored_role_keywords": ["REST API", "Database Optimization", "Docker", "Git Workflow", "Microservices"],
         },
     )
+
+
+def generate_learning_syllabus(
+    topic: str,
+    program_type: str = "course",
+    duration: str = "4 Weeks",
+    skill_level: str = "Intermediate",
+) -> Dict[str, Any]:
+    """
+    Generates an industry-ready curriculum, learning objectives, and module list
+    for training programs, certifications, workshops, and bootcamps.
+    """
+    system_prompt = (
+        "You are an expert Technical Curriculum Architect & Corporate L&D Director. "
+        "Output ONLY a valid JSON object with the following fields: "
+        "'title' (polished industry course title), "
+        "'description' (2-3 compelling overview sentences), "
+        "'skills_covered' (comma-separated key technical skills), "
+        "'duration' (e.g., '4 Weeks', '20 Hours'), "
+        "'eligibility' (prerequisites string), "
+        "'modules' (array of 4-6 objects with 'id' (int 1-N), 'title' (module title), 'duration' (e.g. '1.5 Hours'), 'description' (summary), 'topics' (array of strings), 'reading_time' (string), 'video_url' (empty string or sample url))."
+    )
+
+    user_prompt = f"""
+    Topic / Skill Focus: {topic}
+    Program Type: {program_type}
+    Target Duration: {duration}
+    Target Skill Level: {skill_level}
+
+    Create an engaging, practical, hands-on curriculum tailored for college students preparing for industry hiring.
+    """
+
+    raw = _call_ai(
+        [{"role": "system", "content": system_prompt}, {"role": "user", "content": user_prompt}],
+        json_mode=True,
+        temperature=0.25,
+    )
+
+    clean_topic = topic.strip() or "Full-Stack Software Engineering"
+    fallback_modules = [
+        {
+            "id": 1,
+            "title": f"Fundamentals & Architecture of {clean_topic}",
+            "duration": "1.5 Hours",
+            "description": f"Core principles, system design overview, and setting up the modern development environment for {clean_topic}.",
+            "topics": ["Foundations & Setup", "Core Architecture Patterns", "Best Practices"],
+            "reading_time": "25 mins",
+            "video_url": "",
+        },
+        {
+            "id": 2,
+            "title": "Practical Hands-On Workflows & Implementation",
+            "duration": "2.5 Hours",
+            "description": "Deep-dive implementation with industry coding standards and component breakdown.",
+            "topics": ["Real-world Implementation", "Data Pipelines & State Management", "Error Handling"],
+            "reading_time": "35 mins",
+            "video_url": "",
+        },
+        {
+            "id": 3,
+            "title": "Optimization, Security & Production Readiness",
+            "duration": "2 Hours",
+            "description": "Enterprise performance profiling, security vulnerability mitigations, and testing suites.",
+            "topics": ["Performance Profiling", "Security Best Practices", "Automated Testing"],
+            "reading_time": "20 mins",
+            "video_url": "",
+        },
+        {
+            "id": 4,
+            "title": "Capstone Industry Project & Certification Assessment",
+            "duration": "2 Hours",
+            "description": "Deliver a production-ready artifact demonstrating mastery for enterprise credentials.",
+            "topics": ["Capstone Architecture", "Code Review & Linting", "Final Assessment & Verification"],
+            "reading_time": "30 mins",
+            "video_url": "",
+        },
+    ]
+
+    return _clean_and_parse_json(
+        raw,
+        fallback_default={
+            "title": f"Mastering {clean_topic}: Industry Practitioner Certification",
+            "description": f"Comprehensive hands-on training covering modern {clean_topic} workflows, enterprise architecture, and verified industry credentialing.",
+            "skills_covered": f"{clean_topic}, Problem Solving, System Design, CI/CD, Enterprise Standards",
+            "duration": duration or "4 Weeks",
+            "eligibility": "Basic programming fundamentals and curiosity to build real-world systems.",
+            "modules": fallback_modules,
+        },
+    )

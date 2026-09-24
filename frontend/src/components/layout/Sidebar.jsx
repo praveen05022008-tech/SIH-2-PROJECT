@@ -109,6 +109,7 @@ export function Sidebar({ isOpen = false, onClose }) {
           { to: '/industry/post-opportunity', label: 'Post Opportunity', icon: Briefcase },
           { to: '/industry/applications', label: 'Applicant Pipeline', icon: Users },
           { to: '/industry/mentorship', label: 'Internship Tracking', icon: GraduationCap },
+          { to: '/industry/learning-programs', label: 'Academy & Training', icon: BookOpen },
           { to: '/industry/collaborations', label: 'Institutional Collab', icon: FolderGit2 },
         ];
       case 'institution':
