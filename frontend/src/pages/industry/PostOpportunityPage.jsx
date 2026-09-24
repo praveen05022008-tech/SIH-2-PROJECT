@@ -14,6 +14,9 @@ export function PostOpportunityPage() {
     required_qualifications: '',
     eligibility_cgpa: 6.5,
     eligibility_year: 3,
+    min_experience_years: 2,
+    academic_qualification: 'Ph.D / Post-Graduate',
+    target_departments: '',
     location: '',
     work_mode: 'remote',
     duration: '3 Months',
@@ -59,6 +62,8 @@ export function PostOpportunityPage() {
     setSelectedSkills(selectedSkills.filter((s) => s.skill_id !== skillId));
   };
 
+  const isFacultyOffering = ['faculty_internship', 'industrial_training'].includes(formData.type);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setSubmitting(true);
@@ -66,8 +71,11 @@ export function PostOpportunityPage() {
 
     const payload = {
       ...formData,
-      eligibility_cgpa: parseFloat(formData.eligibility_cgpa) || 0,
-      eligibility_year: parseInt(formData.eligibility_year) || null,
+      eligibility_cgpa: isFacultyOffering ? 0 : (parseFloat(formData.eligibility_cgpa) || 0),
+      eligibility_year: isFacultyOffering ? null : (parseInt(formData.eligibility_year) || null),
+      min_experience_years: isFacultyOffering ? (parseInt(formData.min_experience_years) || 0) : null,
+      target_departments: isFacultyOffering ? formData.target_departments : null,
+      academic_qualification: isFacultyOffering ? formData.academic_qualification : null,
       openings_count: parseInt(formData.openings_count) || 1,
       skills: selectedSkills.map((s) => ({
         skill_id: s.skill_id,
@@ -78,7 +86,7 @@ export function PostOpportunityPage() {
 
     try {
       await api.post('/opportunities', payload);
-      setMsg({ type: 'success', text: 'Opportunity published successfully!' });
+      setMsg({ type: 'success', text: isFacultyOffering ? 'Faculty Sabbatical / Training published successfully!' : 'Opportunity published successfully!' });
       setTimeout(() => navigate('/industry/dashboard'), 1200);
     } catch (err) {
       setMsg({ type: 'error', text: err.message || 'Failed to post opportunity.' });
@@ -394,7 +402,7 @@ export function PostOpportunityPage() {
             </div>
           </div>
 
-          {/* Row 5: Duration, Stipend, CGPA */}
+          {/* Row 5: Duration, Stipend, and Criteria */}
           <div
             style={{
               display: 'grid',
@@ -404,10 +412,10 @@ export function PostOpportunityPage() {
             }}
           >
             <div>
-              <label style={labelStyle}>Duration</label>
+              <label style={labelStyle}>{isFacultyOffering ? 'Sabbatical / Residency Duration' : 'Duration'}</label>
               <input
                 type="text"
-                placeholder="3 Months"
+                placeholder={isFacultyOffering ? 'e.g. 8 Weeks (Summer) / 6 Months' : '3 Months'}
                 value={formData.duration}
                 onChange={(e) => setFormData({ ...formData, duration: e.target.value })}
                 style={inputStyle}
@@ -423,10 +431,10 @@ export function PostOpportunityPage() {
             </div>
 
             <div>
-              <label style={labelStyle}>Stipend / Salary Offer</label>
+              <label style={labelStyle}>{isFacultyOffering ? 'Faculty Stipend / Sabbatical Honorarium' : 'Stipend / Salary Offer'}</label>
               <input
                 type="text"
-                placeholder="Rs. 20,000 / month"
+                placeholder={isFacultyOffering ? 'e.g. Rs. 50,000 / month + Lab Allowance' : 'Rs. 20,000 / month'}
                 value={formData.stipend_salary}
                 onChange={(e) => setFormData({ ...formData, stipend_salary: e.target.value })}
                 style={inputStyle}
@@ -441,27 +449,90 @@ export function PostOpportunityPage() {
               />
             </div>
 
-            <div>
-              <label style={labelStyle}>Min Eligibility CGPA</label>
-              <input
-                type="number"
-                step="0.1"
-                min="0"
-                max="10"
-                value={formData.eligibility_cgpa}
-                onChange={(e) => setFormData({ ...formData, eligibility_cgpa: e.target.value })}
-                style={inputStyle}
-                onFocus={(e) => {
-                  e.target.style.borderColor = '#2563EB';
-                  e.target.style.boxShadow = '0 0 0 3px rgba(37, 99, 235, 0.12)';
-                }}
-                onBlur={(e) => {
-                  e.target.style.borderColor = '#E2E8F0';
-                  e.target.style.boxShadow = 'none';
-                }}
-              />
-            </div>
+            {isFacultyOffering ? (
+              <div>
+                <label style={labelStyle}>Min Academic Experience (Years)</label>
+                <input
+                  type="number"
+                  min="0"
+                  placeholder="e.g. 2"
+                  value={formData.min_experience_years}
+                  onChange={(e) => setFormData({ ...formData, min_experience_years: e.target.value })}
+                  style={inputStyle}
+                  onFocus={(e) => {
+                    e.target.style.borderColor = '#2563EB';
+                    e.target.style.boxShadow = '0 0 0 3px rgba(37, 99, 235, 0.12)';
+                  }}
+                  onBlur={(e) => {
+                    e.target.style.borderColor = '#E2E8F0';
+                    e.target.style.boxShadow = 'none';
+                  }}
+                />
+              </div>
+            ) : (
+              <div>
+                <label style={labelStyle}>Min Eligibility CGPA</label>
+                <input
+                  type="number"
+                  step="0.1"
+                  min="0"
+                  max="10"
+                  value={formData.eligibility_cgpa}
+                  onChange={(e) => setFormData({ ...formData, eligibility_cgpa: e.target.value })}
+                  style={inputStyle}
+                  onFocus={(e) => {
+                    e.target.style.borderColor = '#2563EB';
+                    e.target.style.boxShadow = '0 0 0 3px rgba(37, 99, 235, 0.12)';
+                  }}
+                  onBlur={(e) => {
+                    e.target.style.borderColor = '#E2E8F0';
+                    e.target.style.boxShadow = 'none';
+                  }}
+                />
+              </div>
+            )}
           </div>
+
+          {/* Optional Faculty Academic Criteria Row */}
+          {isFacultyOffering && (
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 300px), 1fr))',
+                gap: '20px',
+                marginBottom: '26px',
+                padding: '16px',
+                backgroundColor: '#F8FAFC',
+                border: '1px solid #E2E8F0',
+                borderRadius: '10px',
+              }}
+            >
+              <div>
+                <label style={labelStyle}>Academic Qualification Desired</label>
+                <select
+                  value={formData.academic_qualification}
+                  onChange={(e) => setFormData({ ...formData, academic_qualification: e.target.value })}
+                  style={{ ...inputStyle, cursor: 'pointer' }}
+                >
+                  <option value="Ph.D / Doctorate">Ph.D / Doctorate Degree</option>
+                  <option value="Post-Doctoral Fellow">Post-Doctoral Fellow</option>
+                  <option value="M.Tech / M.E / M.S">M.Tech / M.E / M.S (Post-Graduate)</option>
+                  <option value="Any Academic Qualification">Any Post-Graduate / Faculty</option>
+                </select>
+              </div>
+
+              <div>
+                <label style={labelStyle}>Target Academic Departments</label>
+                <input
+                  type="text"
+                  placeholder="e.g. Computer Science, Information Technology, AI/Data Science"
+                  value={formData.target_departments}
+                  onChange={(e) => setFormData({ ...formData, target_departments: e.target.value })}
+                  style={inputStyle}
+                />
+              </div>
+            </div>
+          )}
 
           {/* Row 6: Tag Required Skills */}
           <div style={{ marginBottom: '26px' }}>

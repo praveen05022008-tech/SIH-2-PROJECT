@@ -195,7 +195,7 @@ export function CertificateModal({ certificate, onClose }) {
                 fontWeight: 800,
                 color: '#1E293B',
                 letterSpacing: '-0.5px',
-                margin: '4px 0 16px',
+                margin: '4px 0 6px',
                 textDecoration: 'underline',
                 textDecorationColor: '#93C5FD',
                 textUnderlineOffset: '6px',
@@ -203,10 +203,15 @@ export function CertificateModal({ certificate, onClose }) {
             >
               {certificate.student_name}
             </h2>
+            {(certificate.designation || certificate.institution_name) && (
+              <p style={{ fontSize: '13.5px', color: '#64748B', fontWeight: 600, margin: '0 0 16px' }}>
+                {[certificate.designation, certificate.institution_name].filter(Boolean).join(' • ')}
+              </p>
+            )}
 
             {/* Achievement Text */}
             <p style={{ fontSize: '14px', color: '#475569', lineHeight: 1.6, maxWidth: '620px', margin: '0 auto 16px' }}>
-              has successfully fulfilled all curriculum requirements, practical assignments, and competency milestones for the professional training program in
+              has successfully fulfilled all curriculum requirements, practical assignments, and competency milestones for the {certificate.program_type === 'fdp' ? 'Faculty Development Program (FDP)' : 'professional training program'} in
             </p>
 
             {/* Course Title Badge */}
@@ -217,13 +222,34 @@ export function CertificateModal({ certificate, onClose }) {
                 border: '1.5px solid #BFDBFE',
                 borderRadius: '10px',
                 padding: '10px 24px',
-                margin: '0 auto 18px',
+                margin: '0 auto 14px',
               }}
             >
               <h3 style={{ margin: 0, fontSize: '18px', fontWeight: 800, color: '#1D4ED8' }}>
                 {certificate.program_title}
               </h3>
             </div>
+
+            {certificate.credits && (
+              <div style={{ marginBottom: '14px' }}>
+                <span
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    padding: '4px 12px',
+                    backgroundColor: '#FEF3C7',
+                    border: '1px solid #FDE68A',
+                    borderRadius: '20px',
+                    color: '#92400E',
+                    fontSize: '12px',
+                    fontWeight: 700,
+                  }}
+                >
+                  <Sparkles size={13} color="#D97706" /> {certificate.credits} FDP / CPE Academic Credits Conferred
+                </span>
+              </div>
+            )}
 
             {certificate.skills && (
               <p style={{ fontSize: '12px', color: '#64748B', margin: '0 auto 20px', maxWidth: '580px' }}>

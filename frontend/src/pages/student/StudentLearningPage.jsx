@@ -50,6 +50,11 @@ export function StudentLearningPage() {
   const [submittingQuiz, setSubmittingQuiz] = useState(false);
   const [quizResult, setQuizResult] = useState(null); // SubmitQuizResponse
 
+  // Per-Module Quiz State
+  const [moduleQuizAnswers, setModuleQuizAnswers] = useState({}); // { [moduleId]: { [qId]: optionIndex } }
+  const [moduleQuizResult, setModuleQuizResult] = useState({}); // { [moduleId]: SubmitModuleQuizResponse }
+  const [submittingModuleQuiz, setSubmittingModuleQuiz] = useState(false);
+
   // Certificate Modal Preview
   const [previewCert, setPreviewCert] = useState(null);
 
@@ -134,6 +139,53 @@ export function StudentLearningPage() {
       toast.error('Error updating progress: ' + err.message);
     } finally {
       setUpdatingModuleId(null);
+    }
+  };
+
+  const handleSubmitModuleQuiz = async (moduleId, questions) => {
+    if (!activePlayerProgram || !activeEnrollment) return;
+
+    const currentAnswers = moduleQuizAnswers[moduleId] || {};
+    const answeredCount = Object.keys(currentAnswers).length;
+    if (answeredCount < questions.length) {
+      if (!window.confirm(`You answered ${answeredCount} of ${questions.length} questions for this module quiz. Submit now?`)) {
+        return;
+      }
+    }
+
+    setSubmittingModuleQuiz(true);
+    try {
+      const res = await api.post(`/learning-programs/${activePlayerProgram.id}/submit-module-quiz`, {
+        module_id: moduleId,
+        answers: currentAnswers,
+      });
+
+      setModuleQuizResult((prev) => ({
+        ...prev,
+        [moduleId]: res,
+      }));
+
+      if (res.passed) {
+        toast.success(`🎉 Module ${moduleId} Assessment Passed (${res.score_percent}%)!`);
+        setActiveEnrollment((prev) => ({
+          ...prev,
+          progress_percent: res.progress_percent,
+          completed_modules: JSON.stringify(res.completed_modules),
+          certificate_issued: res.certificate_issued,
+        }));
+        if (res.certificate) {
+          setPreviewCert(res.certificate);
+          toast.success('🏆 All modules passed! Your verified certificate is ready!');
+        }
+      } else {
+        toast.error(`Score: ${res.score_percent}%. Passing threshold is ${res.passing_threshold}%. Review the explanations below and retake.`);
+      }
+
+      fetchData();
+    } catch (err) {
+      toast.error('Error evaluating module assessment: ' + err.message);
+    } finally {
+      setSubmittingModuleQuiz(false);
     }
   };
 
@@ -999,6 +1051,158 @@ export function StudentLearningPage() {
                             >
                               Open Resources <ExternalLink size={12} />
                             </a>
+                          </div>
+                        )}
+
+                        {/* Per-Module Assessment Quiz */}
+                        {currentModule.quiz && currentModule.quiz.length > 0 && (
+                          <div style={{ marginTop: '28px', borderTop: '1.5px solid #E2E8F0', paddingTop: '24px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
+                              <div>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '15px', fontWeight: 800, color: '#0F172A' }}>
+                                  <HelpCircle size={18} color="#2563EB" /> Module {selectedModuleIndex + 1} Assessment & Knowledge Check
+                                </div>
+                                <div style={{ fontSize: '12px', color: '#64748B', marginTop: '2px' }}>
+                                  Score &ge; {activePlayerProgram.passing_score || 60}% to pass this module and earn completion credit.
+                                </div>
+                              </div>
+                              {isCurrentCompleted && (
+                                <span style={{ backgroundColor: '#ECFDF5', color: '#059669', border: '1px solid #A7F3D0', fontWeight: 700, fontSize: '12px', padding: '4px 10px', borderRadius: '6px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                  <Check size={14} /> Module Passed
+                                </span>
+                              )}
+                            </div>
+
+                            {/* Module Quiz Results Card if available */}
+                            {moduleQuizResult[currentModule.id] && (
+                              <div
+                                style={{
+                                  backgroundColor: moduleQuizResult[currentModule.id].passed ? '#ECFDF5' : '#FEF2F2',
+                                  border: `1.5px solid ${moduleQuizResult[currentModule.id].passed ? '#A7F3D0' : '#FECACA'}`,
+                                  borderRadius: '12px',
+                                  padding: '14px 18px',
+                                  marginBottom: '20px',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'space-between',
+                                }}
+                              >
+                                <div>
+                                  <div style={{ fontSize: '13.5px', fontWeight: 800, color: moduleQuizResult[currentModule.id].passed ? '#065F46' : '#991B1B' }}>
+                                    {moduleQuizResult[currentModule.id].passed ? '✓ Module Quiz Passed!' : '✕ Score Below Passing Threshold'}
+                                  </div>
+                                  <div style={{ fontSize: '12px', color: moduleQuizResult[currentModule.id].passed ? '#047857' : '#B91C1C', marginTop: '2px' }}>
+                                    Your Score: {moduleQuizResult[currentModule.id].score_percent}% &bull; Correct: {moduleQuizResult[currentModule.id].correct_count}/{moduleQuizResult[currentModule.id].total_questions}
+                                  </div>
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Questions */}
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                              {currentModule.quiz.map((q, qIdx) => {
+                                const qidStr = String(q.id || qIdx + 1);
+                                const currentModuleAns = moduleQuizAnswers[currentModule.id] || {};
+                                const selectedOption = currentModuleAns[qidStr];
+                                const modRes = moduleQuizResult[currentModule.id];
+                                const detail = modRes?.detailed_results?.find((r) => String(r.question_id) === qidStr);
+
+                                return (
+                                  <div
+                                    key={q.id || qIdx}
+                                    style={{
+                                      backgroundColor: '#F8FAFC',
+                                      border: detail
+                                        ? detail.is_correct
+                                          ? '1.5px solid #86EFAC'
+                                          : '1.5px solid #FCA5A5'
+                                        : '1px solid #E2E8F0',
+                                      borderRadius: '10px',
+                                      padding: '16px',
+                                    }}
+                                  >
+                                    <div style={{ fontSize: '12px', fontWeight: 700, color: '#2563EB', marginBottom: '4px' }}>
+                                      Question {qIdx + 1}
+                                    </div>
+                                    <div style={{ fontSize: '13.5px', fontWeight: 700, color: '#0F172A', marginBottom: '12px' }}>
+                                      {q.question}
+                                    </div>
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                      {q.options?.map((opt, optIdx) => {
+                                        const isSelected = selectedOption === optIdx;
+                                        const isCorrect = detail && q.correct_answer === optIdx;
+                                        return (
+                                          <label
+                                            key={optIdx}
+                                            style={{
+                                              display: 'flex',
+                                              alignItems: 'center',
+                                              gap: '8px',
+                                              padding: '8px 12px',
+                                              borderRadius: '6px',
+                                              border: isCorrect
+                                                ? '1.5px solid #10B981'
+                                                : isSelected
+                                                ? '1.5px solid #2563EB'
+                                                : '1px solid #E2E8F0',
+                                              backgroundColor: isCorrect
+                                                ? '#ECFDF5'
+                                                : isSelected
+                                                ? '#EFF6FF'
+                                                : '#FFFFFF',
+                                              cursor: 'pointer',
+                                              fontSize: '13px',
+                                            }}
+                                          >
+                                            <input
+                                              type="radio"
+                                              name={`mod_${currentModule.id}_q_${q.id || qIdx}`}
+                                              value={optIdx}
+                                              checked={isSelected}
+                                              onChange={() => {
+                                                setModuleQuizAnswers((prev) => ({
+                                                  ...prev,
+                                                  [currentModule.id]: {
+                                                    ...(prev[currentModule.id] || {}),
+                                                    [qidStr]: optIdx,
+                                                  },
+                                                }));
+                                              }}
+                                              style={{ accentColor: '#2563EB' }}
+                                            />
+                                            <span>{opt}</span>
+                                          </label>
+                                        );
+                                      })}
+                                    </div>
+                                    {detail && detail.explanation && (
+                                      <div style={{ marginTop: '10px', padding: '8px 10px', backgroundColor: '#FFFFFF', borderRadius: '6px', fontSize: '12px', color: '#475569', borderLeft: '3px solid #3B82F6' }}>
+                                        <strong>Explanation:</strong> {detail.explanation}
+                                      </div>
+                                    )}
+                                  </div>
+                                );
+                              })}
+                            </div>
+
+                            {activeEnrollment && (
+                              <div style={{ marginTop: '16px', display: 'flex', justifyContent: 'flex-end' }}>
+                                <button
+                                  type="button"
+                                  onClick={() => handleSubmitModuleQuiz(currentModule.id, currentModule.quiz)}
+                                  disabled={submittingModuleQuiz}
+                                  className="btn btn-primary btn-sm"
+                                  style={{ padding: '8px 20px', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+                                >
+                                  <CheckCircle2 size={15} />
+                                  {submittingModuleQuiz
+                                    ? 'Grading Answers...'
+                                    : isCurrentCompleted
+                                    ? 'Retake Module Quiz'
+                                    : 'Submit Module Quiz & Pass'}
+                                </button>
+                              </div>
+                            )}
                           </div>
                         )}
                       </div>

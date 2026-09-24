@@ -627,20 +627,20 @@ def generate_learning_syllabus(
 ) -> Dict[str, Any]:
     """
     Generates an industry-ready curriculum, learning objectives, module list,
-    and a comprehensive final certification examination questionnaire (MCQs)
-    for training programs, certifications, workshops, and bootcamps.
+    and per-module assessment questionnaires (MCQs) for training programs.
     """
     system_prompt = (
         "You are an expert Technical Curriculum Architect & Corporate L&D Director. "
-        "Output ONLY a valid JSON object with the following fields: "
+        "Output ONLY a valid JSON object matching this exact schema: "
         "'title' (polished industry course title), "
         "'description' (2-3 compelling overview sentences), "
         "'skills_covered' (comma-separated key technical skills), "
         "'duration' (e.g., '4 Weeks', '20 Hours'), "
         "'eligibility' (prerequisites string), "
-        "'passing_score' (int 60 or 70), "
-        "'modules' (array of 4-5 objects with 'id' (int 1-N), 'title' (module title), 'duration' (e.g. '1.5 Hours'), 'description' (summary), 'topics' (array of strings), 'reading_time' (string), 'video_url' (empty string or sample url)), "
-        "'quiz' (array of 5 practical multiple-choice certification exam questions with 'id' (int 1-5), 'question' (string), 'options' (array of 4 distinct plausible strings), 'correct_answer' (int index 0-3), 'explanation' (string explaining why correct))."
+        "'passing_score' (float or int, e.g. 60.0), "
+        "'modules' (array of 3-4 module objects, each containing: "
+        "'id' (int 1-N), 'title' (module title), 'duration' (string e.g. '2 Hours'), 'description' (summary), 'topics' (array of strings), 'reading_time' (string), 'video_url' (string), and "
+        "'quiz' (array of 2-3 practical MCQs for this specific module with 'id' (int), 'question' (string), 'options' (array of 4 distinct strings), 'correct_answer' (int index 0-3), 'explanation' (string)))."
     )
 
     user_prompt = f"""
@@ -649,7 +649,7 @@ def generate_learning_syllabus(
     Target Duration: {duration}
     Target Skill Level: {skill_level}
 
-    Create an engaging, practical, hands-on curriculum and 5 rigorous certification exam questions tailored for college students preparing for industry hiring.
+    Create an engaging, practical curriculum where each module has its own 2-3 multiple-choice assessment questions.
     """
 
     raw = _call_ai(
@@ -662,102 +662,133 @@ def generate_learning_syllabus(
     fallback_modules = [
         {
             "id": 1,
-            "title": f"Fundamentals & Architecture of {clean_topic}",
-            "duration": "1.5 Hours",
-            "description": f"Core principles, system design overview, and setting up the modern development environment for {clean_topic}.",
-            "topics": ["Foundations & Setup", "Core Architecture Patterns", "Best Practices"],
-            "reading_time": "25 mins",
-            "video_url": "",
-        },
-        {
-            "id": 2,
-            "title": "Practical Hands-On Workflows & Implementation",
-            "duration": "2.5 Hours",
-            "description": "Deep-dive implementation with industry coding standards and component breakdown.",
-            "topics": ["Real-world Implementation", "Data Pipelines & State Management", "Error Handling"],
-            "reading_time": "35 mins",
-            "video_url": "",
-        },
-        {
-            "id": 3,
-            "title": "Optimization, Security & Production Readiness",
+            "title": f"Module 1: Fundamentals & Architecture of {clean_topic}",
             "duration": "2 Hours",
-            "description": "Enterprise performance profiling, security vulnerability mitigations, and testing suites.",
-            "topics": ["Performance Profiling", "Security Best Practices", "Automated Testing"],
+            "description": f"Core architectural principles, system design overview, and modern development setup for {clean_topic}.",
+            "topics": ["Architecture Overview", "Environment Setup", "Core Syntax & Best Practices"],
             "reading_time": "20 mins",
             "video_url": "",
-        },
-        {
-            "id": 4,
-            "title": "Capstone Industry Project & Certification Assessment",
-            "duration": "2 Hours",
-            "description": "Deliver a production-ready artifact demonstrating mastery for enterprise credentials.",
-            "topics": ["Capstone Architecture", "Code Review & Linting", "Final Assessment & Verification"],
-            "reading_time": "30 mins",
-            "video_url": "",
-        },
-    ]
-
-    fallback_quiz = [
-        {
-            "id": 1,
-            "question": f"In enterprise {clean_topic} architecture, which practice is critical for ensuring reliable scalability?",
-            "options": [
-                "Decoupling modular service layers with clear interface contracts",
-                "Coupling database queries tightly within presentation components",
-                "Hardcoding configuration parameters directly in application files",
-                "Disabling structured error boundaries to reduce overhead",
+            "quiz": [
+                {
+                    "id": 1,
+                    "question": f"Which architectural principle is paramount for maintainability in modern {clean_topic} systems?",
+                    "options": [
+                        "Decoupled modular service layers with clear interface contracts",
+                        "Coupling database queries tightly within presentation components",
+                        "Hardcoding configuration parameters directly in application files",
+                        "Disabling structured error boundaries to reduce overhead",
+                    ],
+                    "correct_answer": 0,
+                    "explanation": "Decoupling architectural layers ensures high cohesion, loose coupling, testability, and horizontal scalability.",
+                },
+                {
+                    "id": 2,
+                    "question": "What is the primary role of environment variables in enterprise development?",
+                    "options": [
+                        "To style CSS components dynamically",
+                        "To securely isolate configuration parameters and secrets across environments",
+                        "To compile TypeScript into JavaScript",
+                        "To compress static asset images",
+                    ],
+                    "correct_answer": 1,
+                    "explanation": "Environment variables isolate sensitive secrets and environment-specific endpoints from version control.",
+                },
             ],
-            "correct_answer": 0,
-            "explanation": "Decoupling architectural layers ensures high cohesion, loose coupling, testability, and horizontal scalability.",
         },
         {
             "id": 2,
-            "question": "What is the primary benefit of enforcing strict validation schemas on incoming API payloads?",
-            "options": [
-                "It eliminates the need for database storage entirely",
-                "It prevents malformed data and malicious injection attacks before execution",
-                "It automatically deploys the code to production clusters",
-                "It compresses network traffic by 90%",
+            "title": "Module 2: Practical Hands-On Implementation & Data Flow",
+            "duration": "3 Hours",
+            "description": "Deep-dive implementation with standard design patterns, state management, and real-time data handling.",
+            "topics": ["Real-world Implementation", "Data Pipelines & State Management", "Error Handling"],
+            "reading_time": "30 mins",
+            "video_url": "",
+            "quiz": [
+                {
+                    "id": 1,
+                    "question": "When designing RESTful APIs, which HTTP status code should be returned when a new resource is successfully created?",
+                    "options": ["200 OK", "201 Created", "204 No Content", "400 Bad Request"],
+                    "correct_answer": 1,
+                    "explanation": "HTTP 201 Created is the standard response for successful resource creation.",
+                },
+                {
+                    "id": 2,
+                    "question": "What is the primary benefit of enforcing strict validation schemas on incoming API payloads?",
+                    "options": [
+                        "It eliminates the need for database storage entirely",
+                        "It prevents malformed data and malicious injection attacks before execution",
+                        "It automatically deploys the code to production clusters",
+                        "It compresses network traffic by 90%",
+                    ],
+                    "correct_answer": 1,
+                    "explanation": "Strict schema validation acts as a first defensive line against corrupted data, type errors, and injection exploits.",
+                },
             ],
-            "correct_answer": 1,
-            "explanation": "Strict schema validation acts as a first defensive line against corrupted data, type errors, and injection exploits.",
         },
         {
             "id": 3,
-            "question": "When debugging performance bottlenecks in real-time workloads, what should be evaluated first?",
-            "options": [
-                "Rebooting all production server nodes",
-                "Database query execution plans, indexing, and I/O latency profiles",
-                "Changing the UI color theme",
-                "Removing unit testing assertions",
+            "title": "Module 3: Security, Optimization & Production Readiness",
+            "duration": "2.5 Hours",
+            "description": "Enterprise performance profiling, security vulnerability mitigations, and automated testing suites.",
+            "topics": ["Optimization & Latency", "Automated Testing", "Security Best Practices"],
+            "reading_time": "25 mins",
+            "video_url": "",
+            "quiz": [
+                {
+                    "id": 1,
+                    "question": "Which of the following is considered an industry standard for securing confidential API access tokens?",
+                    "options": [
+                        "Committing plaintext secrets to public version control repositories",
+                        "Using encrypted environment variables and secret management vaults",
+                        "Writing tokens into client-side console logs",
+                        "Sharing keys via unencrypted text messages",
+                    ],
+                    "correct_answer": 1,
+                    "explanation": "Secret management vaults and encrypted runtime environment variables prevent catastrophic credential leakage.",
+                },
+                {
+                    "id": 2,
+                    "question": "When debugging performance bottlenecks in real-time workloads, what should be evaluated first?",
+                    "options": [
+                        "Rebooting all production server nodes",
+                        "Database query execution plans, indexing, and I/O latency profiles",
+                        "Changing the UI color theme",
+                        "Removing unit testing assertions",
+                    ],
+                    "correct_answer": 1,
+                    "explanation": "Database queries and unindexed table scans represent the vast majority of latency bottlenecks in production web systems.",
+                },
             ],
-            "correct_answer": 1,
-            "explanation": "Database queries and unindexed table scans represent the vast majority of latency bottlenecks in production web systems.",
         },
         {
             "id": 4,
-            "question": "Which of the following is considered an industry standard for securing confidential API access tokens?",
-            "options": [
-                "Committing plaintext secrets to public version control repositories",
-                "Using encrypted environment variables and secret management vaults",
-                "Writing tokens into client-side console logs",
-                "Sharing keys via unencrypted text messages",
+            "title": "Module 4: Capstone Evaluation & Verified Certification",
+            "duration": "2 Hours",
+            "description": "Deliver a production-ready artifact demonstrating mastery for verified enterprise credentials.",
+            "topics": ["Capstone Architecture", "Code Review & Linting", "Credential Issuance"],
+            "reading_time": "30 mins",
+            "video_url": "",
+            "quiz": [
+                {
+                    "id": 1,
+                    "question": "What is the fundamental objective of automated Continuous Integration (CI) pipelines?",
+                    "options": [
+                        "To replace human software developers completely",
+                        "To automatically build, lint, and run test suites on every code commit",
+                        "To permanently prevent code modifications",
+                        "To reduce code quality standards",
+                    ],
+                    "correct_answer": 1,
+                    "explanation": "CI pipelines guarantee code quality and catch regressions immediately before merging into deployment branches.",
+                },
+                {
+                    "id": 2,
+                    "question": "Which containerization technology enables consistent execution across local development and cloud production clusters?",
+                    "options": ["Docker", "Microsoft Word", "FTP Server", "DNS Resolver"],
+                    "correct_answer": 0,
+                    "explanation": "Docker packages the application alongside its dependencies into portable, reproducible container images.",
+                },
             ],
-            "correct_answer": 1,
-            "explanation": "Secret management vaults and encrypted runtime environment variables prevent catastrophic credential leakage.",
-        },
-        {
-            "id": 5,
-            "question": "What is the fundamental objective of automated Continuous Integration (CI) pipelines?",
-            "options": [
-                "To replace human software developers completely",
-                "To automatically build, lint, and run test suites on every code commit",
-                "To permanently prevent code modifications",
-                "To reduce code quality standards",
-            ],
-            "correct_answer": 1,
-            "explanation": "CI pipelines guarantee code quality and catch regressions immediately before merging into deployment branches.",
         },
     ]
 
@@ -771,6 +802,5 @@ def generate_learning_syllabus(
             "eligibility": "Basic programming fundamentals and curiosity to build real-world systems.",
             "passing_score": 60.0,
             "modules": fallback_modules,
-            "quiz": fallback_quiz,
         },
     )

@@ -189,8 +189,7 @@ def create_skill_intelligence_graph(db: Session):
             )
         )
 
-        usr_msg = HumanMessage(
-            content=f"""
+        usr_msg = HumanMessage(content=f"""
             Candidate Name: {state.get('student_name', 'Student')}
             Target Role: {state.get('target_role', 'Software Engineer')}
             Readiness Score: {state.get('readiness_percentage', 50)}%
@@ -199,8 +198,7 @@ def create_skill_intelligence_graph(db: Session):
             Missing Skills: {json.dumps(state.get('missing_skills', []))}
             Available Recommended Programs: {json.dumps(state.get('recommended_programs', []))}
             Career Context / Interests: {state.get('career_interests', 'Industry Career Track')}
-            """
-        )
+            """)
 
         try:
             response = llm.invoke([sys_msg, usr_msg])

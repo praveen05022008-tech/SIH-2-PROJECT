@@ -28,15 +28,12 @@ def _build_html_template(
 
     details_html = ""
     if details_list:
-        items = "".join(
-            f"""
+        items = "".join(f"""
             <tr style="border-bottom: 1px solid #e2e8f0;">
                 <td style="padding: 10px 14px; font-weight: 600; color: #475569; width: 35%;">{k}</td>
                 <td style="padding: 10px 14px; color: #0f172a; font-family: monospace, sans-serif;">{v}</td>
             </tr>
-            """
-            for k, v in details_list
-        )
+            """ for k, v in details_list)
         details_html = f"""
         <table style="width: 100%; border-collapse: collapse; margin: 20px 0; background: #f8fafc; border-radius: 8px; overflow: hidden; border: 1px solid #e2e8f0; font-size: 14px;">
             <tbody>

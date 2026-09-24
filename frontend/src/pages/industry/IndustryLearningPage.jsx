@@ -24,7 +24,11 @@ import {
   Mail,
   Zap,
   HelpCircle,
-  Check
+  Check,
+  Upload,
+  Download,
+  FileText,
+  Code
 } from 'lucide-react';
 import { LoadingSpinner } from '../../components/common/LoadingSpinner';
 import { CertificateModal } from '../../components/common/CertificateModal';
@@ -51,6 +55,9 @@ export function IndustryLearningPage() {
   const [providerName, setProviderName] = useState(user?.organization_name || user?.username || 'Cognizant IT Services');
   const [programType, setProgramType] = useState('course');
   const [learningMode, setLearningMode] = useState('self_paced');
+  const [targetAudience, setTargetAudience] = useState('all');
+  const [facultyCredits, setFacultyCredits] = useState(2.0);
+  const [deliveryFormat, setDeliveryFormat] = useState('online');
   const [duration, setDuration] = useState('4 Weeks');
   const [skillsCovered, setSkillsCovered] = useState('');
   const [description, setDescription] = useState('');
@@ -84,7 +91,227 @@ export function IndustryLearningPage() {
     },
   ]);
 
+  const [jsonInputText, setJsonInputText] = useState('');
   const [submitting, setSubmitting] = useState(false);
+
+  const sampleTemplate = {
+    title: "Enterprise Full-Stack Cloud & React Certification",
+    provider_name: user?.organization_name || user?.username || "Cognizant Technology Solutions",
+    program_type: "course",
+    learning_mode: "self_paced",
+    duration: "4 Weeks",
+    skills_covered: "React, FastAPI, Docker, Microservices, CI/CD, SQL",
+    description: "Comprehensive enterprise-grade training covering modern full-stack web architecture, API design, database optimization, and cloud deployment pipelines.",
+    eligibility: "Basic knowledge of JavaScript / Python and web basics.",
+    fee_amount: 0.0,
+    passing_score: 60.0,
+    auto_certify: true,
+    modules: [
+      {
+        id: 1,
+        title: "Module 1: Architecture & Foundations",
+        duration: "2.5 Hours",
+        reading_time: "25 mins",
+        description: "Core principles of scalable enterprise architectures, layered patterns, and developer environment configuration.",
+        topics: [
+          "Monolithic vs Microservices Architecture",
+          "Layered Clean Architecture & Separation of Concerns",
+          "Configuring Local Development & Docker Containers"
+        ],
+        quiz: [
+          {
+            id: 1,
+            question: "Which architectural pattern provides clean decoupling between UI presentation and business logic?",
+            options: [
+              "Layered / Clean Architecture with interface contracts",
+              "Embedding raw SQL statements directly in React UI components",
+              "Hardcoding state variables globally across all modules",
+              "Disabling API schema validation middleware"
+            ],
+            correct_answer: 0,
+            explanation: "Layered architecture separates UI, business logic, and persistence layers, ensuring high testability and maintainability."
+          },
+          {
+            id: 2,
+            question: "Why is containerization with Docker preferred in modern enterprise deployments?",
+            options: [
+              "It guarantees environment consistency across development, testing, and production",
+              "It eliminates the need for writing unit tests",
+              "It automatically writes database migration scripts",
+              "It slows down deployment cycles intentionally"
+            ],
+            correct_answer: 0,
+            explanation: "Docker standardizes execution environments, preventing the 'works on my machine' defect across staging and production."
+          }
+        ]
+      },
+      {
+        id: 2,
+        title: "Module 2: High-Performance API & Data Layer",
+        duration: "3 Hours",
+        reading_time: "30 mins",
+        description: "Building resilient REST APIs, schema validation with Pydantic, and database indexing strategies.",
+        topics: [
+          "FastAPI Async Endpoints & Dependency Injection",
+          "Database Indexing & Query Latency Optimization",
+          "JWT Token Authentication & Role-Based Access Control"
+        ],
+        quiz: [
+          {
+            id: 1,
+            question: "What is the primary benefit of creating database indices on frequently filtered columns?",
+            options: [
+              "Reduces query execution time by avoiding full-table scans",
+              "Increases storage consumption indefinitely",
+              "Disables foreign key constraints",
+              "Replaces data encryption"
+            ],
+            correct_answer: 0,
+            explanation: "Indices allow the database engine to perform rapid B-tree lookups instead of scanning every single row."
+          },
+          {
+            id: 2,
+            question: "Which HTTP status code should be returned when an unauthenticated user attempts to access a protected route?",
+            options: [
+              "401 Unauthorized",
+              "200 OK",
+              "404 Not Found",
+              "500 Internal Server Error"
+            ],
+            correct_answer: 0,
+            explanation: "HTTP 401 Unauthorized indicates that the request lacks valid authentication credentials."
+          }
+        ]
+      },
+      {
+        id: 3,
+        title: "Module 3: Enterprise Best Practices, Security & Capstone",
+        duration: "3.5 Hours",
+        reading_time: "35 mins",
+        description: "Production security hardening, secret management, CI/CD pipeline automation, and certification capstone.",
+        topics: [
+          "OWASP Security Standards & Secret Management Vaults",
+          "Automated CI/CD Workflows & Regression Testing",
+          "Final Capstone Review & Certification Assessment"
+        ],
+        quiz: [
+          {
+            id: 1,
+            question: "What is the industry best practice for handling production secrets and API keys?",
+            options: [
+              "Using encrypted environment variables and secret management vaults",
+              "Committing plaintext secrets to public GitHub repositories",
+              "Logging secrets to browser client consoles",
+              "Sharing credentials via unencrypted emails"
+            ],
+            correct_answer: 0,
+            explanation: "Secrets must be securely stored in vaults or environment managers to prevent catastrophic leaks."
+          },
+          {
+            id: 2,
+            question: "What is the main purpose of an automated CI/CD pipeline?",
+            options: [
+              "To automatically build, lint, test, and package applications on every code push",
+              "To prevent engineers from contributing code",
+              "To bypass all security audits",
+              "To replace human code reviews entirely"
+            ],
+            correct_answer: 0,
+            explanation: "CI/CD automates quality checks, test execution, and deployment verification."
+          }
+        ]
+      }
+    ]
+  };
+
+  const handleDownloadTemplate = () => {
+    const blob = new Blob([JSON.stringify(sampleTemplate, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'course_and_module_quizzes_template.json';
+    a.click();
+    URL.revokeObjectURL(url);
+    toast.success('Sample JSON template downloaded successfully!');
+  };
+
+  const handleApplyJson = (rawInput) => {
+    const textToParse = rawInput !== undefined ? rawInput : jsonInputText;
+    if (!textToParse || !textToParse.trim()) {
+      toast.error('Please paste JSON or upload a .json file.');
+      return;
+    }
+
+    try {
+      const parsed = typeof textToParse === 'string' ? JSON.parse(textToParse) : textToParse;
+
+      // Case 1: Direct Array of Questions
+      if (Array.isArray(parsed)) {
+        if (parsed.length > 0 && parsed[0].question) {
+          setQuizQuestions(parsed);
+          toast.success(`Imported ${parsed.length} questions into Assessment!`);
+          setActiveFormTab('assessment');
+          return;
+        } else if (parsed.length > 0 && parsed[0].title) {
+          setModules(parsed);
+          toast.success(`Imported ${parsed.length} modules!`);
+          setActiveFormTab('curriculum');
+          return;
+        }
+      }
+
+      // Case 2: Full Course Schema
+      if (parsed.title) setTitle(parsed.title);
+      if (parsed.provider_name) setProviderName(parsed.provider_name);
+      if (parsed.program_type) setProgramType(parsed.program_type);
+      if (parsed.learning_mode) setLearningMode(parsed.learning_mode);
+      if (parsed.duration) setDuration(parsed.duration);
+      if (parsed.skills_covered) setSkillsCovered(parsed.skills_covered);
+      if (parsed.description) setDescription(parsed.description);
+      if (parsed.eligibility) setEligibility(parsed.eligibility);
+      if (parsed.fee_amount !== undefined) setFeeAmount(parsed.fee_amount);
+      if (parsed.passing_score !== undefined) setPassingScore(Number(parsed.passing_score));
+      if (parsed.auto_certify !== undefined) setAutoCertify(Boolean(parsed.auto_certify));
+
+      if (parsed.modules && Array.isArray(parsed.modules)) {
+        setModules(parsed.modules);
+        if (!parsed.quiz) {
+          const aggregated = [];
+          parsed.modules.forEach((m) => {
+            if (m.quiz && Array.isArray(m.quiz)) {
+              aggregated.push(...m.quiz);
+            }
+          });
+          if (aggregated.length > 0) {
+            setQuizQuestions(aggregated);
+          }
+        }
+      }
+
+      if (parsed.quiz && Array.isArray(parsed.quiz)) {
+        setQuizQuestions(parsed.quiz);
+      }
+
+      toast.success('Successfully imported course parameters, curriculum modules & per-module quizzes!');
+      setActiveFormTab('curriculum');
+    } catch (err) {
+      toast.error('Invalid JSON structure: ' + err.message);
+    }
+  };
+
+  const handleFileUpload = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const content = event.target?.result;
+      if (content) {
+        setJsonInputText(content);
+        handleApplyJson(content);
+      }
+    };
+    reader.readAsText(file);
+  };
 
   // Enrolled Roster Modal
   const [showRosterModal, setShowRosterModal] = useState(false);
@@ -152,6 +379,9 @@ export function IndustryLearningPage() {
       setProviderName(progToEdit.provider_name);
       setProgramType(progToEdit.program_type);
       setLearningMode(progToEdit.learning_mode);
+      setTargetAudience(progToEdit.target_audience || 'all');
+      setFacultyCredits(progToEdit.faculty_credits ?? 2.0);
+      setDeliveryFormat(progToEdit.delivery_format || 'online');
       setDuration(progToEdit.duration || '4 Weeks');
       setSkillsCovered(progToEdit.skills_covered || '');
       setDescription(progToEdit.description || '');
@@ -178,6 +408,9 @@ export function IndustryLearningPage() {
       setProviderName(user?.organization_name || user?.username || 'Cognizant IT Services');
       setProgramType('course');
       setLearningMode('self_paced');
+      setTargetAudience('all');
+      setFacultyCredits(2.0);
+      setDeliveryFormat('online');
       setDuration('4 Weeks');
       setSkillsCovered('Full-Stack Development, React, Node.js, REST API');
       setDescription('');
@@ -219,8 +452,17 @@ export function IndustryLearningPage() {
       return;
     }
 
-    if (quizQuestions.length === 0) {
-      toast.error('Please add at least 1 certification exam question.');
+    let finalQuiz = [...quizQuestions];
+    if (finalQuiz.length === 0) {
+      modules.forEach((m) => {
+        if (m.quiz && Array.isArray(m.quiz)) {
+          finalQuiz.push(...m.quiz);
+        }
+      });
+    }
+
+    if (finalQuiz.length === 0) {
+      toast.error('Please add at least 1 certification exam or module question.');
       return;
     }
 
@@ -231,6 +473,9 @@ export function IndustryLearningPage() {
       provider_type: 'industry',
       program_type: programType,
       learning_mode: learningMode,
+      target_audience: targetAudience,
+      faculty_credits: parseFloat(facultyCredits) || 2.0,
+      delivery_format: deliveryFormat,
       duration,
       skills_covered: skillsCovered,
       description,
@@ -656,6 +901,25 @@ export function IndustryLearningPage() {
               >
                 <HelpCircle size={15} /> 2. Certification Exam & MCQs ({quizQuestions.length})
               </button>
+              <button
+                type="button"
+                onClick={() => setActiveFormTab('json')}
+                style={{
+                  padding: '12px 18px',
+                  background: 'none',
+                  border: 'none',
+                  borderBottom: activeFormTab === 'json' ? '2.5px solid #2563EB' : '2.5px solid transparent',
+                  color: activeFormTab === 'json' ? '#2563EB' : '#64748B',
+                  fontWeight: 700,
+                  fontSize: '13.5px',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                }}
+              >
+                <Code size={15} /> 3. ⚡ Upload / Paste JSON
+              </button>
             </div>
 
             {/* Modal Form Content */}
@@ -765,6 +1029,42 @@ export function IndustryLearningPage() {
                         <option value="offline">On-Campus / Corporate Lab</option>
                       </select>
                     </div>
+                  </div>
+
+                  {/* Two Column Row: Target Audience & Faculty Credits */}
+                  <div style={{ display: 'grid', gridTemplateColumns: (targetAudience === 'faculty' || programType === 'fdp') ? '1fr 1fr' : '1fr', gap: '16px' }}>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#1E293B', marginBottom: '6px' }}>
+                        Target Audience <span style={{ color: '#EF4444' }}>*</span>
+                      </label>
+                      <select
+                        value={targetAudience}
+                        onChange={(e) => setTargetAudience(e.target.value)}
+                        style={{ width: '100%', padding: '10px 14px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '13.5px', backgroundColor: '#FFFFFF', boxSizing: 'border-box' }}
+                      >
+                        <option value="all">All Audiences (Open to All)</option>
+                        <option value="faculty">Faculty & Academicians Only (FDP)</option>
+                        <option value="student">Students Only</option>
+                      </select>
+                    </div>
+
+                    {(targetAudience === 'faculty' || programType === 'fdp') && (
+                      <div>
+                        <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#1E293B', marginBottom: '6px' }}>
+                          FDP Academic Credits (e.g. 2.0 Credits)
+                        </label>
+                        <input
+                          type="number"
+                          step="0.5"
+                          min="0"
+                          max="20"
+                          placeholder="e.g. 2.0"
+                          value={facultyCredits}
+                          onChange={(e) => setFacultyCredits(e.target.value)}
+                          style={{ width: '100%', padding: '10px 14px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '13.5px', boxSizing: 'border-box' }}
+                        />
+                      </div>
+                    )}
                   </div>
 
                   {/* Two Column Row: Duration & Skills Covered */}
@@ -886,7 +1186,7 @@ export function IndustryLearningPage() {
                     </div>
                   </div>
                 </>
-              ) : (
+              ) : activeFormTab === 'assessment' ? (
                 /* ─── Assessment Questionnaire & Passing Score Tab ─── */
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
                   {/* Passing Score Control */}
@@ -1089,6 +1389,111 @@ export function IndustryLearningPage() {
                     ))}
                   </div>
                 </div>
+              ) : (
+                /* ─── JSON Schema Upload & Template Tab ─── */
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
+                  {/* Download Template Banner */}
+                  <div
+                    style={{
+                      backgroundColor: '#F8FAFC',
+                      border: '1.5px solid #CBD5E1',
+                      borderRadius: '12px',
+                      padding: '16px 20px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      flexWrap: 'wrap',
+                      gap: '12px',
+                    }}
+                  >
+                    <div>
+                      <div style={{ fontSize: '14px', fontWeight: 800, color: '#0F172A', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <Download size={18} color="#2563EB" /> Download Standard Course & Quiz Template (.json)
+                      </div>
+                      <div style={{ fontSize: '12.5px', color: '#64748B', marginTop: '2px' }}>
+                        Get the exact JSON structure with sample modules, topics, and MCQs with 0-indexed correct answers.
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleDownloadTemplate}
+                      className="btn btn-secondary btn-sm"
+                      style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontWeight: 700 }}
+                    >
+                      <Download size={14} /> Download Sample JSON
+                    </button>
+                  </div>
+
+                  {/* Drag & Drop / File Picker */}
+                  <div
+                    style={{
+                      border: '2px dashed #93C5FD',
+                      borderRadius: '12px',
+                      padding: '24px',
+                      backgroundColor: '#EFF6FF',
+                      textAlign: 'center',
+                      cursor: 'pointer',
+                      position: 'relative',
+                    }}
+                  >
+                    <input
+                      type="file"
+                      accept=".json,application/json"
+                      onChange={handleFileUpload}
+                      style={{
+                        position: 'absolute',
+                        inset: 0,
+                        opacity: 0,
+                        cursor: 'pointer',
+                        width: '100%',
+                        height: '100%',
+                      }}
+                    />
+                    <div style={{ width: '44px', height: '44px', borderRadius: '50%', backgroundColor: '#DBEAFE', color: '#2563EB', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 10px' }}>
+                      <Upload size={20} />
+                    </div>
+                    <div style={{ fontSize: '14px', fontWeight: 700, color: '#1E293B' }}>
+                      Click or drag a .json file here to upload
+                    </div>
+                    <div style={{ fontSize: '12px', color: '#64748B', marginTop: '4px' }}>
+                      Supports full course schema or array of assessment questions
+                    </div>
+                  </div>
+
+                  {/* Raw JSON Paste Area */}
+                  <div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                      <label style={{ fontSize: '13px', fontWeight: 700, color: '#1E293B', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <Code size={15} color="#2563EB" /> Or Paste Raw JSON Directly:
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() => handleApplyJson()}
+                        className="btn btn-primary btn-sm"
+                        style={{ padding: '6px 14px', fontSize: '12.5px', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+                      >
+                        <CheckCircle2 size={13} /> Parse & Apply Parameters
+                      </button>
+                    </div>
+                    <textarea
+                      rows={10}
+                      placeholder={`Paste JSON here, e.g.:\n{\n  "title": "Cloud Computing Masterclass",\n  "passing_score": 60,\n  "modules": [...]\n}`}
+                      value={jsonInputText}
+                      onChange={(e) => setJsonInputText(e.target.value)}
+                      style={{
+                        width: '100%',
+                        padding: '12px',
+                        borderRadius: '8px',
+                        border: '1px solid #CBD5E1',
+                        fontSize: '12.5px',
+                        fontFamily: 'monospace',
+                        backgroundColor: '#0F172A',
+                        color: '#38BDF8',
+                        boxSizing: 'border-box',
+                      }}
+                    />
+                  </div>
+                </div>
               )}
 
               {/* Automated Certificate & Dispatch Toggle */}
@@ -1206,7 +1611,7 @@ export function IndustryLearningPage() {
                   <table className="table">
                     <thead>
                       <tr>
-                        <th>Student Name</th>
+                        <th>Participant / Role</th>
                         <th>Institution / Dept</th>
                         <th>Module Progress</th>
                         <th>Exam Result</th>
@@ -1217,8 +1622,15 @@ export function IndustryLearningPage() {
                       {roster.map((s) => (
                         <tr key={s.enrollment_id}>
                           <td>
-                            <div style={{ fontWeight: 700, color: '#0F172A', fontSize: '13.5px' }}>{s.student_name}</div>
-                            <div style={{ fontSize: '12px', color: '#64748B' }}>{s.student_email}</div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                              <span style={{ fontWeight: 700, color: '#0F172A', fontSize: '13.5px' }}>{s.student_name}</span>
+                              {s.participant_role === 'faculty' && (
+                                <span style={{ fontSize: '10px', padding: '1px 6px', borderRadius: '4px', backgroundColor: '#F3E8FF', color: '#7E22CE', fontWeight: 800 }}>FACULTY</span>
+                              )}
+                            </div>
+                            <div style={{ fontSize: '12px', color: '#64748B' }}>
+                              {s.participant_role === 'faculty' && s.participant_designation ? `${s.participant_designation} • ` : ''}{s.student_email}
+                            </div>
                           </td>
                           <td style={{ fontSize: '12.5px', color: '#475569' }}>
                             <div>{s.student_institution || 'Independent Candidate'}</div>
@@ -1278,6 +1690,10 @@ export function IndustryLearningPage() {
                                     issue_date: s.completed_at || new Date().toISOString(),
                                     verification_hash: s.verification_hash,
                                     skills: activeProgram.skills_covered,
+                                    recipient_role: s.participant_role,
+                                    credits: activeProgram.faculty_credits,
+                                    designation: s.participant_designation,
+                                    institution_name: s.student_institution,
                                   })
                                 }
                                 style={{

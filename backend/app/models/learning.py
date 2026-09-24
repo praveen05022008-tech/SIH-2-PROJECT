@@ -28,6 +28,9 @@ class LearningProgram(Base):
     quiz_json = Column(Text, nullable=True)  # JSON array of assessment questions
     passing_score = Column(Float, default=60.0)  # Minimum percentage required for certificate
     auto_certify = Column(Boolean, default=True)
+    target_audience = Column(String(50), default="all")  # all, faculty, student
+    faculty_credits = Column(Float, default=2.0)  # FDP / Academic credits
+    delivery_format = Column(String(50), default="online")  # online, industrial_campus, hybrid
     created_at = Column(DateTime, default=datetime.utcnow)
 
     # Relationships
@@ -72,6 +75,10 @@ class Certificate(Base):
     issuer_name = Column(String(255), nullable=False)
     issue_date = Column(DateTime, default=datetime.utcnow)
     skills = Column(Text, nullable=True)
+    recipient_role = Column(String(50), default="student")  # student, faculty
+    credits = Column(Float, nullable=True)  # Academic FDP credits
+    designation = Column(String(100), nullable=True)
+    institution_name = Column(String(255), nullable=True)
     verification_hash = Column(String(255), nullable=False, unique=True, index=True)
     status = Column(String(50), default="valid")  # valid, revoked
 

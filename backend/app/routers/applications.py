@@ -8,7 +8,7 @@ from app.core.deps import get_current_user, require_role
 from app.database import get_db
 from app.models.internship import Internship
 from app.models.opportunity import Application, Opportunity
-from app.models.profile import StudentProfile
+from app.models.profile import FacultyProfile, StudentProfile
 from app.models.user import User
 from app.schemas.application import ApplicationCreate, ApplicationResponse, ApplicationStatusUpdate
 from app.services.email_service import (
@@ -16,7 +16,7 @@ from app.services.email_service import (
     send_application_submitted_email,
     send_new_application_received_email,
 )
-from app.services.matching import evaluate_student_opportunity_match
+from app.services.matching import evaluate_faculty_opportunity_match, evaluate_student_opportunity_match
 from app.services.notification import send_notification
 
 router = APIRouter(prefix="/applications", tags=["Applications & Recruitment Workflow"])
@@ -55,6 +55,13 @@ def apply_opportunity(
             match_score = match_res["match_score"]
             if not resume_url:
                 resume_url = student.resume_url
+    elif current_user.role == "faculty":
+        faculty = db.query(FacultyProfile).filter(FacultyProfile.user_id == current_user.id).first()
+        if faculty:
+            match_res = evaluate_faculty_opportunity_match(faculty=faculty, opportunity=opp, db=db)
+            match_score = match_res["match_score"]
+            if not resume_url:
+                resume_url = faculty.cv_url
 
     app_record = Application(
         opportunity_id=opp.id,
@@ -62,6 +69,7 @@ def apply_opportunity(
         applicant_role=current_user.role,
         status="applied",
         resume_url=resume_url,
+        noc_document_url=data.noc_document_url,
         cover_note=data.cover_note,
         match_score=match_score,
     )
@@ -70,21 +78,23 @@ def apply_opportunity(
     db.refresh(app_record)
 
     # Notify employer (In-app)
+    role_label = "Faculty member" if current_user.role == "faculty" else "Candidate"
     send_notification(
         db=db,
         user_id=opp.posted_by_user_id,
         title="New Application Received",
-        message=f"A new candidate applied for '{opp.title}' (Match Score: {match_score or 'N/A'}%).",
+        message=f"{role_label} applied for '{opp.title}' (Match Score: {match_score or 'N/A'}%).",
         notification_type="application",
         link_url="/industry/applications",
     )
 
     # Dispatched transactional emails
-    applicant_name = (
-        current_user.student_profile.full_name
-        if current_user.student_profile and current_user.student_profile.full_name
-        else current_user.username
-    )
+    if current_user.role == "faculty" and current_user.faculty_profile and current_user.faculty_profile.full_name:
+        applicant_name = f"Prof. {current_user.faculty_profile.full_name}"
+    elif current_user.student_profile and current_user.student_profile.full_name:
+        applicant_name = current_user.student_profile.full_name
+    else:
+        applicant_name = current_user.username
     # Email to applicant
     send_application_submitted_email(
         to_email=current_user.email,
@@ -150,26 +160,61 @@ def get_applications(
         opp = a.opportunity
         applicant = a.applicant
         applicant_info = None
-        if applicant and applicant.student_profile:
+        if applicant and applicant.faculty_profile:
+            fp = applicant.faculty_profile
+            applicant_info = {
+                "user_id": applicant.id,
+                "full_name": fp.full_name,
+                "email": applicant.email,
+                "applicant_role": "faculty",
+                "course": None,
+                "cgpa": None,
+                "institution_name": fp.institution.name if fp.institution else None,
+                "department_name": fp.department.name if fp.department else None,
+                "designation": fp.designation or "Faculty Member",
+                "qualification": fp.qualification,
+                "specialization": fp.specialization,
+                "experience_years": fp.experience_years,
+                "research_areas": fp.research_areas,
+                "cv_url": fp.cv_url,
+                "noc_document_url": a.noc_document_url,
+            }
+        elif applicant and applicant.student_profile:
             sp = applicant.student_profile
             applicant_info = {
                 "user_id": applicant.id,
                 "full_name": sp.full_name,
                 "email": applicant.email,
+                "applicant_role": "student",
                 "course": sp.course,
                 "cgpa": sp.cgpa,
                 "institution_name": sp.institution.name if sp.institution else None,
                 "department_name": sp.department.name if sp.department else None,
+                "designation": None,
+                "qualification": None,
+                "specialization": None,
+                "experience_years": None,
+                "research_areas": None,
+                "cv_url": sp.resume_url,
+                "noc_document_url": a.noc_document_url,
             }
         elif applicant:
             applicant_info = {
                 "user_id": applicant.id,
                 "full_name": applicant.username,
                 "email": applicant.email,
+                "applicant_role": a.applicant_role or "student",
                 "course": None,
                 "cgpa": None,
                 "institution_name": None,
                 "department_name": None,
+                "designation": None,
+                "qualification": None,
+                "specialization": None,
+                "experience_years": None,
+                "research_areas": None,
+                "cv_url": None,
+                "noc_document_url": a.noc_document_url,
             }
 
         results.append(
@@ -180,6 +225,7 @@ def get_applications(
                 "applicant_role": a.applicant_role,
                 "status": a.status,
                 "resume_url": a.resume_url,
+                "noc_document_url": a.noc_document_url,
                 "cover_note": a.cover_note,
                 "reviewer_notes": a.reviewer_notes,
                 "match_score": a.match_score,
@@ -233,23 +279,25 @@ def update_application_status(
     db.commit()
     db.refresh(app_record)
 
+    notify_link = "/faculty/applications" if app_record.applicant_role == "faculty" else "/student/applications"
     send_notification(
         db=db,
         user_id=app_record.applicant_user_id,
         title=f"Application Status Updated: {data.status.capitalize()}",
         message=f"Your application for '{opp.title}' at {opp.company_name} is now '{data.status.replace('_', ' ').capitalize()}'.",
         notification_type="application",
-        link_url="/student/applications",
+        link_url=notify_link,
     )
 
     # Trigger transactional status update email
     applicant = app_record.applicant
     if applicant and applicant.email:
-        applicant_name = (
-            applicant.student_profile.full_name
-            if applicant.student_profile and applicant.student_profile.full_name
-            else applicant.username
-        )
+        if app_record.applicant_role == "faculty" and applicant.faculty_profile and applicant.faculty_profile.full_name:
+            applicant_name = f"Prof. {applicant.faculty_profile.full_name}"
+        elif applicant.student_profile and applicant.student_profile.full_name:
+            applicant_name = applicant.student_profile.full_name
+        else:
+            applicant_name = applicant.username
         send_application_status_update_email(
             to_email=applicant.email,
             applicant_name=applicant_name,
@@ -259,26 +307,61 @@ def update_application_status(
         )
 
     applicant_info = None
-    if applicant and applicant.student_profile:
+    if applicant and applicant.faculty_profile:
+        fp = applicant.faculty_profile
+        applicant_info = {
+            "user_id": applicant.id,
+            "full_name": fp.full_name,
+            "email": applicant.email,
+            "applicant_role": "faculty",
+            "course": None,
+            "cgpa": None,
+            "institution_name": fp.institution.name if fp.institution else None,
+            "department_name": fp.department.name if fp.department else None,
+            "designation": fp.designation or "Faculty Member",
+            "qualification": fp.qualification,
+            "specialization": fp.specialization,
+            "experience_years": fp.experience_years,
+            "research_areas": fp.research_areas,
+            "cv_url": fp.cv_url,
+            "noc_document_url": app_record.noc_document_url,
+        }
+    elif applicant and applicant.student_profile:
         sp = applicant.student_profile
         applicant_info = {
             "user_id": applicant.id,
             "full_name": sp.full_name,
             "email": applicant.email,
+            "applicant_role": "student",
             "course": sp.course,
             "cgpa": sp.cgpa,
             "institution_name": sp.institution.name if sp.institution else None,
             "department_name": sp.department.name if sp.department else None,
+            "designation": None,
+            "qualification": None,
+            "specialization": None,
+            "experience_years": None,
+            "research_areas": None,
+            "cv_url": sp.resume_url,
+            "noc_document_url": app_record.noc_document_url,
         }
     elif applicant:
         applicant_info = {
             "user_id": applicant.id,
             "full_name": applicant.username,
             "email": applicant.email,
+            "applicant_role": app_record.applicant_role or "student",
             "course": None,
             "cgpa": None,
             "institution_name": None,
             "department_name": None,
+            "designation": None,
+            "qualification": None,
+            "specialization": None,
+            "experience_years": None,
+            "research_areas": None,
+            "cv_url": None,
+            "noc_document_url": app_record.noc_document_url,
         }
 
     return {
@@ -288,6 +371,7 @@ def update_application_status(
         "applicant_role": app_record.applicant_role,
         "status": app_record.status,
         "resume_url": app_record.resume_url,
+        "noc_document_url": app_record.noc_document_url,
         "cover_note": app_record.cover_note,
         "reviewer_notes": app_record.reviewer_notes,
         "match_score": app_record.match_score,

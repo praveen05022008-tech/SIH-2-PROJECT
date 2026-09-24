@@ -27,6 +27,9 @@ class OpportunityBase(BaseModel):
     required_qualifications: Optional[str] = None
     eligibility_cgpa: Optional[float] = 0.0
     eligibility_year: Optional[int] = None
+    target_departments: Optional[str] = None
+    min_experience_years: Optional[int] = None
+    academic_qualification: Optional[str] = None
     location: str
     work_mode: str = "remote"  # remote, on-site, hybrid
     duration: Optional[str] = None

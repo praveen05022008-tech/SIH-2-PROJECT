@@ -11,7 +11,7 @@ from app.core.deps import get_current_user, get_optional_current_user, require_r
 from app.database import get_db
 from app.models.learning import Certificate, LearningProgram, ProgramEnrollment
 from app.models.portfolio import Certification, Portfolio
-from app.models.profile import StudentProfile
+from app.models.profile import FacultyProfile, StudentProfile
 from app.models.user import User
 from app.schemas.learning import (
     AIGenerateSyllabusRequest,
@@ -22,6 +22,8 @@ from app.schemas.learning import (
     LearningProgramUpdate,
     ProgramEnrollmentResponse,
     StudentEnrollmentDetail,
+    SubmitModuleQuizRequest,
+    SubmitModuleQuizResponse,
     SubmitQuizRequest,
     SubmitQuizResponse,
     UpdateProgressRequest,
@@ -44,15 +46,31 @@ def _generate_certificate_for_enrollment(enrollment: ProgramEnrollment, db: Sess
     if not student or not prog:
         raise HTTPException(status_code=400, detail="Student or program data missing.")
 
-    # Determine student full name
-    student_profile = db.query(StudentProfile).filter(StudentProfile.user_id == student.id).first()
-    student_name = ""
-    if student_profile and student_profile.full_name:
-        student_name = student_profile.full_name
-    elif student.full_name:
-        student_name = student.full_name
+    # Determine recipient details based on user role
+    recipient_role = student.role
+    designation = None
+    inst_name = None
+    if recipient_role == "faculty":
+        faculty_profile = db.query(FacultyProfile).filter(FacultyProfile.user_id == student.id).first()
+        if faculty_profile and faculty_profile.full_name:
+            student_name = f"Prof. {faculty_profile.full_name}"
+            designation = faculty_profile.designation or "Faculty Member"
+            if faculty_profile.institution:
+                inst_name = faculty_profile.institution.name
+        elif student.full_name:
+            student_name = f"Prof. {student.full_name}"
+        else:
+            student_name = f"Prof. {student.username.title()}"
     else:
-        student_name = student.username.title()
+        student_profile = db.query(StudentProfile).filter(StudentProfile.user_id == student.id).first()
+        if student_profile and student_profile.full_name:
+            student_name = student_profile.full_name
+            if student_profile.institution:
+                inst_name = student_profile.institution.name
+        elif student.full_name:
+            student_name = student.full_name
+        else:
+            student_name = student.username.title()
 
     cert_num = f"AIC-CERT-{datetime.utcnow().year}-{uuid.uuid4().hex[:8].upper()}"
     v_hash = uuid.uuid4().hex
@@ -68,6 +86,10 @@ def _generate_certificate_for_enrollment(enrollment: ProgramEnrollment, db: Sess
         issuer_name=prog.provider_name,
         issue_date=datetime.utcnow(),
         skills=prog.skills_covered,
+        recipient_role=recipient_role,
+        credits=prog.faculty_credits if recipient_role == "faculty" else None,
+        designation=designation,
+        institution_name=inst_name,
         verification_hash=v_hash,
         status="valid",
     )
@@ -82,6 +104,7 @@ def _generate_certificate_for_enrollment(enrollment: ProgramEnrollment, db: Sess
     enrollment.quiz_passed = True
 
     # Auto-add to student portfolio if student profile exists
+    student_profile = db.query(StudentProfile).filter(StudentProfile.user_id == student.id).first()
     if student_profile:
         portfolio = db.query(Portfolio).filter(Portfolio.student_id == student_profile.id).first()
         if not portfolio:
@@ -133,6 +156,7 @@ def _generate_certificate_for_enrollment(enrollment: ProgramEnrollment, db: Sess
 def get_learning_programs(
     program_type: Optional[str] = None,
     learning_mode: Optional[str] = None,
+    target_audience: Optional[str] = None,
     search: Optional[str] = None,
     current_user: Optional[User] = Depends(get_optional_current_user),
     db: Session = Depends(get_db),
@@ -142,6 +166,12 @@ def get_learning_programs(
         query = query.filter(LearningProgram.program_type == program_type)
     if learning_mode:
         query = query.filter(LearningProgram.learning_mode == learning_mode)
+    if target_audience:
+        query = query.filter(
+            (LearningProgram.target_audience == target_audience)
+            | (LearningProgram.target_audience == "all")
+            | (LearningProgram.target_audience.is_(None))
+        )
     if search:
         s = f"%{search}%"
         query = query.filter(
@@ -153,9 +183,9 @@ def get_learning_programs(
 
     programs = query.order_by(LearningProgram.created_at.desc()).all()
 
-    # Pre-fetch user enrollments if authenticated
+    # Pre-fetch user enrollments if authenticated (students & faculty)
     user_enrollment_map = {}
-    if current_user and hasattr(current_user, "role") and current_user.role == "student":
+    if current_user and hasattr(current_user, "role") and current_user.role in ["student", "faculty"]:
         enrollments = db.query(ProgramEnrollment).filter(ProgramEnrollment.student_id == current_user.id).all()
         for enr in enrollments:
             user_enrollment_map[enr.program_id] = enr
@@ -198,6 +228,9 @@ def get_learning_programs(
             quiz_json=p.quiz_json,
             passing_score=p.passing_score or 60.0,
             auto_certify=p.auto_certify if p.auto_certify is not None else True,
+            target_audience=p.target_audience or "all",
+            faculty_credits=p.faculty_credits or 2.0,
+            delivery_format=p.delivery_format or "online",
             created_by_user_id=p.created_by_user_id,
             created_at=p.created_at,
             enrollments_count=enroll_count,
@@ -408,7 +441,7 @@ def ai_generate_syllabus_endpoint(
 @router.post("/{program_id}/enroll", response_model=ProgramEnrollmentResponse)
 def enroll_in_program(
     program_id: int,
-    current_user: User = Depends(require_role(["student"])),
+    current_user: User = Depends(require_role(["student", "faculty"])),
     db: Session = Depends(get_db),
 ):
     prog = db.query(LearningProgram).filter(LearningProgram.id == program_id).first()
@@ -446,7 +479,7 @@ def enroll_in_program(
 
 @router.get("/my-enrollments", response_model=List[ProgramEnrollmentResponse])
 def get_my_enrollments(
-    current_user: User = Depends(require_role(["student"])),
+    current_user: User = Depends(require_role(["student", "faculty"])),
     db: Session = Depends(get_db),
 ):
     enrollments = (
@@ -466,7 +499,7 @@ def get_my_enrollments(
 def update_enrollment_progress(
     enrollment_id: int,
     req: UpdateProgressRequest,
-    current_user: User = Depends(require_role(["student"])),
+    current_user: User = Depends(require_role(["student", "faculty"])),
     db: Session = Depends(get_db),
 ):
     enrollment = (
@@ -536,12 +569,12 @@ def update_enrollment_progress(
 def submit_certification_quiz(
     program_id: int,
     req: SubmitQuizRequest,
-    current_user: User = Depends(require_role(["student"])),
+    current_user: User = Depends(require_role(["student", "faculty"])),
     db: Session = Depends(get_db),
 ):
     """
-    Submits student's answers to the certification exam.
-    Only if the student passes (>= passing_score) is the certificate generated & emailed.
+    Submits participant's answers to the certification exam.
+    Only if the participant passes (>= passing_score) is the certificate generated & emailed.
     """
     prog = db.query(LearningProgram).filter(LearningProgram.id == program_id).first()
     if not prog:
@@ -624,6 +657,157 @@ def submit_certification_quiz(
     )
 
 
+@router.post("/{program_id}/submit-module-quiz", response_model=SubmitModuleQuizResponse)
+def submit_module_quiz(
+    program_id: int,
+    req: SubmitModuleQuizRequest,
+    current_user: User = Depends(require_role(["student"])),
+    db: Session = Depends(get_db),
+):
+    """
+    Evaluates student's answers for a specific module's quiz.
+    If score >= passing_score, marks the module complete and recalculates overall course progress.
+    If all modules are completed and passed, automatically triggers certificate issuance and email delivery.
+    """
+    prog = db.query(LearningProgram).filter(LearningProgram.id == program_id).first()
+    if not prog:
+        raise HTTPException(status_code=404, detail="Program not found.")
+
+    enrollment = (
+        db.query(ProgramEnrollment)
+        .filter(
+            ProgramEnrollment.program_id == program_id,
+            ProgramEnrollment.student_id == current_user.id,
+        )
+        .first()
+    )
+    if not enrollment:
+        raise HTTPException(status_code=400, detail="Please enroll in this program before taking module quizzes.")
+
+    try:
+        modules = json.loads(prog.modules_json or "[]")
+    except Exception:
+        modules = []
+
+    if not modules:
+        raise HTTPException(status_code=400, detail="No course modules configured for this program.")
+
+    # Find the target module
+    target_module = None
+    for idx, mod in enumerate(modules):
+        mod_id = mod.get("id", idx + 1)
+        if mod_id == req.module_id or str(mod_id) == str(req.module_id):
+            target_module = mod
+            break
+
+    if not target_module:
+        raise HTTPException(status_code=404, detail=f"Module {req.module_id} not found in this curriculum.")
+
+    module_quiz = target_module.get("quiz", [])
+    if not module_quiz:
+        # If no quiz specifically on this module, auto-pass module
+        try:
+            completed_set = set(json.loads(enrollment.completed_modules or "[]"))
+        except Exception:
+            completed_set = set()
+        completed_set.add(req.module_id)
+        enrollment.completed_modules = json.dumps(list(completed_set))
+        all_completed = len(completed_set) >= len(modules)
+        enrollment.progress_percent = round((len(completed_set) / max(len(modules), 1)) * 100.0, 1)
+        cert_resp = None
+        if all_completed:
+            enrollment.status = "completed"
+            enrollment.quiz_passed = True
+            if prog.auto_certify and not enrollment.certificate_issued:
+                cert = _generate_certificate_for_enrollment(enrollment, db)
+                cert_resp = CertificateResponse.from_orm(cert)
+        db.commit()
+        return SubmitModuleQuizResponse(
+            module_id=req.module_id,
+            score_percent=100.0,
+            passed=True,
+            passing_threshold=prog.passing_score or 60.0,
+            correct_count=0,
+            total_questions=0,
+            progress_percent=enrollment.progress_percent,
+            completed_modules=list(completed_set),
+            all_completed=all_completed,
+            certificate_issued=enrollment.certificate_issued,
+            certificate=cert_resp,
+            detailed_results=[],
+        )
+
+    total_q = len(module_quiz)
+    correct_count = 0
+    detailed_results = []
+
+    for q in module_quiz:
+        qid_str = str(q.get("id"))
+        correct_idx = q.get("correct_answer", 0)
+        selected_idx = req.answers.get(qid_str)
+
+        is_correct = selected_idx is not None and int(selected_idx) == int(correct_idx)
+        if is_correct:
+            correct_count += 1
+
+        detailed_results.append(
+            {
+                "question_id": q.get("id"),
+                "question": q.get("question"),
+                "options": q.get("options", []),
+                "selected_answer": selected_idx,
+                "correct_answer": correct_idx,
+                "is_correct": is_correct,
+                "explanation": q.get("explanation", ""),
+            }
+        )
+
+    score_pct = round((correct_count / total_q) * 100.0, 1)
+    passing_th = prog.passing_score if prog.passing_score is not None else 60.0
+    passed = score_pct >= passing_th
+
+    try:
+        completed_set = set(json.loads(enrollment.completed_modules or "[]"))
+    except Exception:
+        completed_set = set()
+
+    if passed:
+        completed_set.add(req.module_id)
+        enrollment.completed_modules = json.dumps(list(completed_set))
+
+    total_mods_count = max(len(modules), 1)
+    all_completed = len(completed_set) >= len(modules)
+    enrollment.progress_percent = round((len(completed_set) / total_mods_count) * 100.0, 1)
+
+    certificate_response = None
+    if all_completed and passed:
+        enrollment.status = "completed"
+        enrollment.quiz_passed = True
+        enrollment.quiz_score = score_pct
+        if prog.auto_certify and not enrollment.certificate_issued:
+            cert = _generate_certificate_for_enrollment(enrollment, db)
+            certificate_response = CertificateResponse.from_orm(cert)
+    elif enrollment.progress_percent > 0:
+        enrollment.status = "in_progress"
+
+    db.commit()
+
+    return SubmitModuleQuizResponse(
+        module_id=req.module_id,
+        score_percent=score_pct,
+        passed=passed,
+        passing_threshold=passing_th,
+        correct_count=correct_count,
+        total_questions=total_q,
+        progress_percent=enrollment.progress_percent,
+        completed_modules=list(completed_set),
+        all_completed=all_completed,
+        certificate_issued=enrollment.certificate_issued,
+        certificate=certificate_response,
+        detailed_results=detailed_results,
+    )
+
+
 @router.get("/industry/manage", response_model=List[LearningProgramResponse])
 def get_industry_published_programs(
     current_user: User = Depends(require_role(["industry", "institution", "admin"])),
@@ -665,6 +849,9 @@ def get_industry_published_programs(
             quiz_json=p.quiz_json,
             passing_score=p.passing_score or 60.0,
             auto_certify=p.auto_certify if p.auto_certify is not None else True,
+            target_audience=p.target_audience or "all",
+            faculty_credits=p.faculty_credits or 2.0,
+            delivery_format=p.delivery_format or "online",
             created_by_user_id=p.created_by_user_id,
             created_at=p.created_at,
             enrollments_count=enroll_count,
@@ -700,10 +887,21 @@ def get_program_enrolled_students(
         if not student:
             continue
 
-        sp = db.query(StudentProfile).filter(StudentProfile.user_id == student.id).first()
-        student_name = sp.full_name if sp and sp.full_name else (student.full_name or student.username.title())
-        dept = sp.department.name if sp and sp.department else None
-        inst = sp.institution.name if sp and sp.institution else None
+        role = student.role
+        designation = None
+        if role == "faculty":
+            fp = db.query(FacultyProfile).filter(FacultyProfile.user_id == student.id).first()
+            student_name = (
+                f"Prof. {fp.full_name}" if fp and fp.full_name else (student.full_name or student.username.title())
+            )
+            dept = fp.department.name if fp and fp.department else None
+            inst = fp.institution.name if fp and fp.institution else None
+            designation = fp.designation if fp else "Faculty Member"
+        else:
+            sp = db.query(StudentProfile).filter(StudentProfile.user_id == student.id).first()
+            student_name = sp.full_name if sp and sp.full_name else (student.full_name or student.username.title())
+            dept = sp.department.name if sp and sp.department else None
+            inst = sp.institution.name if sp and sp.institution else None
 
         cert_num = None
         v_hash = None
@@ -721,6 +919,8 @@ def get_program_enrolled_students(
                 student_email=student.email,
                 student_department=dept,
                 student_institution=inst,
+                participant_role=role,
+                participant_designation=designation,
                 enrolled_at=enr.enrolled_at,
                 status=enr.status,
                 progress_percent=enr.progress_percent,

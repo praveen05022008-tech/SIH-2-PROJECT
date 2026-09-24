@@ -16,7 +16,7 @@ except Exception:
 from app.database import get_db
 from app.models.assessment import Assessment, AssessmentQuestion
 from app.models.opportunity import Opportunity
-from app.models.profile import StudentProfile
+from app.models.profile import FacultyProfile, StudentProfile
 from app.models.skill import CareerRole, Skill, StudentSkill
 from app.models.user import User
 from app.services.groq_service import (
@@ -75,16 +75,25 @@ def api_candidate_insights(
     if not target_id:
         raise HTTPException(status_code=400, detail="Must provide student_id or applicant_user_id")
 
-    # Search by StudentProfile.id, StudentProfile.user_id, or User.id
+    # Search by StudentProfile.id, StudentProfile.user_id, FacultyProfile, or User.id
     student = db.query(StudentProfile).filter(StudentProfile.id == target_id).first()
     if not student:
         student = db.query(StudentProfile).filter(StudentProfile.user_id == target_id).first()
 
-    user = None
+    faculty = None
     if not student:
+        faculty = db.query(FacultyProfile).filter(FacultyProfile.id == target_id).first()
+        if not faculty:
+            faculty = db.query(FacultyProfile).filter(FacultyProfile.user_id == target_id).first()
+
+    user = None
+    if not student and not faculty:
         user = db.query(User).filter(User.id == target_id).first()
-        if user and user.student_profile:
-            student = user.student_profile
+        if user:
+            if user.student_profile:
+                student = user.student_profile
+            elif user.faculty_profile:
+                faculty = user.faculty_profile
 
     opp = db.query(Opportunity).filter(Opportunity.id == data.opportunity_id).first()
     if not opp:
@@ -105,17 +114,34 @@ def api_candidate_insights(
 
         candidate_profile = {
             "full_name": student.full_name,
+            "role": "Student Candidate",
             "department": student.department.name if student.department else (student.course or "Engineering"),
             "cgpa": student.cgpa or 8.0,
             "year_of_study": student.year_of_study or 3,
             "skills": student_skills,
         }
+    elif faculty:
+        raw_areas = (faculty.research_areas or "") + ", " + (faculty.specialization or "")
+        faculty_skills = [
+            {"name": area.strip(), "level": "expert", "verified": True} for area in raw_areas.split(",") if area.strip()
+        ]
+        candidate_profile = {
+            "full_name": faculty.full_name,
+            "role": "Faculty / Academician",
+            "designation": faculty.designation or "Faculty Member",
+            "qualification": faculty.qualification or "Post-Graduate",
+            "department": faculty.department.name if faculty.department else "Engineering",
+            "institution": faculty.institution.name if faculty.institution else "Academic Institution",
+            "experience_years": faculty.experience_years or 3,
+            "specialization": faculty.specialization,
+            "research_areas": faculty.research_areas,
+            "skills": faculty_skills[:8],
+        }
     elif user:
         candidate_profile = {
             "full_name": user.username,
+            "role": user.role.capitalize(),
             "department": user.role.capitalize(),
-            "cgpa": 8.5,
-            "year_of_study": 4,
             "skills": [],
         }
     else:
@@ -126,7 +152,9 @@ def api_candidate_insights(
         "company_name": opp.company_name,
         "type": opp.type,
         "description": opp.description,
-        "required_qualifications": opp.required_qualifications,
+        "required_qualifications": opp.academic_qualification or opp.required_qualifications,
+        "target_departments": opp.target_departments,
+        "min_experience_years": opp.min_experience_years,
         "eligibility_cgpa": opp.eligibility_cgpa,
         "required_skills": [s.skill.name for s in opp.skills if s.skill],
     }

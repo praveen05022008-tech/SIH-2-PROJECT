@@ -21,6 +21,9 @@ class Opportunity(Base):
     required_qualifications = Column(String(255), nullable=True)
     eligibility_cgpa = Column(Float, default=0.0)
     eligibility_year = Column(Integer, nullable=True)
+    target_departments = Column(String(255), nullable=True)  # Disciplines/departments targeted (faculty/student)
+    min_experience_years = Column(Integer, nullable=True)  # Min teaching/research exp for faculty
+    academic_qualification = Column(String(100), nullable=True)  # Ph.D, M.Tech, Any Post-Graduate
     location = Column(String(255), nullable=False)
     work_mode = Column(String(50), default="remote")  # remote, on-site, hybrid
     duration = Column(String(100), nullable=True)  # e.g. "3 months", "6 months", "Full-time"
@@ -60,6 +63,7 @@ class Application(Base):
         String(50), default="applied", index=True
     )  # applied, under_review, shortlisted, selected, rejected, in_progress, completed
     resume_url = Column(String(500), nullable=True)
+    noc_document_url = Column(String(500), nullable=True)  # Optional institutional NOC document
     cover_note = Column(Text, nullable=True)
     reviewer_notes = Column(Text, nullable=True)
     match_score = Column(Float, nullable=True)

@@ -20,6 +20,38 @@ def init_db():
     print("Creating all database tables (28 relational tables)...")
     Base.metadata.create_all(bind=engine)
 
+    from sqlalchemy import inspect, text
+
+    try:
+        inspector = inspect(engine)
+        table_names = inspector.get_table_names()
+        migrations = [
+            ("learning_programs", "target_audience", "VARCHAR(50) DEFAULT 'all'"),
+            ("learning_programs", "faculty_credits", "FLOAT DEFAULT 2.0"),
+            ("learning_programs", "delivery_format", "VARCHAR(50) DEFAULT 'online'"),
+            ("certificates", "recipient_role", "VARCHAR(50) DEFAULT 'student'"),
+            ("certificates", "credits", "FLOAT NULL"),
+            ("certificates", "designation", "VARCHAR(100) NULL"),
+            ("certificates", "institution_name", "VARCHAR(255) NULL"),
+            ("opportunities", "target_departments", "VARCHAR(255) NULL"),
+            ("opportunities", "min_experience_years", "INTEGER NULL"),
+            ("opportunities", "academic_qualification", "VARCHAR(100) NULL"),
+            ("applications", "noc_document_url", "VARCHAR(500) NULL"),
+        ]
+        with engine.connect() as conn:
+            for tbl, col, col_type in migrations:
+                if tbl in table_names:
+                    existing_cols = [c["name"] for c in inspector.get_columns(tbl)]
+                    if col not in existing_cols:
+                        try:
+                            conn.execute(text(f"ALTER TABLE {tbl} ADD COLUMN {col} {col_type}"))
+                            conn.commit()
+                            print(f" [+] Auto-migrated: added column '{col}' to '{tbl}'")
+                        except Exception as ex:
+                            print(f" [!] Note for {tbl}.{col}: {ex}")
+    except Exception as e:
+        print(f" [!] Auto-migration check note: {e}")
+
     db = SessionLocal()
     try:
         # 1. Populate the 5 system roles

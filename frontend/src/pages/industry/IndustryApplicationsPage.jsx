@@ -154,65 +154,124 @@ export function IndustryApplicationsPage() {
             <table className="table">
               <thead>
                 <tr>
-                  <th>Candidate Name</th>
+                  <th>Candidate / Role</th>
                   <th>Position</th>
-                  <th>Institution / Course</th>
-                  <th>CGPA</th>
+                  <th>Institution / Discipline</th>
+                  <th>Academic Profile / CGPA</th>
                   <th>Match Score</th>
+                  <th>NOC Status</th>
                   <th>Status</th>
                   <th>Applied Date</th>
                   <th>Action</th>
                 </tr>
               </thead>
               <tbody>
-                {applications.map((a) => (
-                  <tr key={a.id}>
-                    <td>
-                      <div style={{ fontWeight: 600, color: '#1E2A44' }}>
-                        {a.applicant?.full_name || 'Candidate'}
-                      </div>
-                      <div style={{ fontSize: '11.5px', color: '#6B7280' }}>
-                        {a.applicant?.email}
-                      </div>
-                    </td>
-                    <td>{a.opportunity?.title || 'Opening'}</td>
-                    <td>
-                      <div>{a.applicant?.institution_name || 'Academic Institution'}</div>
-                      <div style={{ fontSize: '11.5px', color: '#6B7280' }}>{a.applicant?.course}</div>
-                    </td>
-                    <td>{a.applicant?.cgpa || 'N/A'}</td>
-                    <td>
-                      {a.match_score !== null && a.match_score !== undefined ? (
-                        <span style={{
-                          backgroundColor: a.match_score >= 70 ? '#DEF7EC' : a.match_score >= 40 ? '#FEF08A' : '#FEE2E2',
-                          color: a.match_score >= 70 ? '#166534' : a.match_score >= 40 ? '#854D0E' : '#991B1B',
-                          padding: '2px 8px',
-                          borderRadius: '4px',
-                          fontWeight: 700,
-                          fontSize: '12px'
-                        }}>
-                          {a.match_score}%
+                {applications.map((a) => {
+                  const isFaculty = a.applicant_role === 'faculty';
+                  return (
+                    <tr key={a.id}>
+                      <td>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <span style={{ fontWeight: 600, color: '#1E2A44' }}>
+                            {a.applicant?.full_name || 'Candidate'}
+                          </span>
+                          {isFaculty && (
+                            <span
+                              style={{
+                                fontSize: '10px',
+                                fontWeight: 700,
+                                padding: '1px 6px',
+                                borderRadius: '4px',
+                                backgroundColor: '#E0E7FF',
+                                color: '#3730A3',
+                              }}
+                            >
+                              FACULTY
+                            </span>
+                          )}
+                        </div>
+                        <div style={{ fontSize: '11.5px', color: '#6B7280' }}>
+                          {a.applicant?.email}
+                        </div>
+                      </td>
+                      <td>{a.opportunity?.title || 'Opening'}</td>
+                      <td>
+                        <div>{a.applicant?.institution_name || 'Academic Institution'}</div>
+                        <div style={{ fontSize: '11.5px', color: '#6B7280' }}>
+                          {isFaculty ? (a.applicant?.department_name || a.applicant?.specialization || 'Department') : a.applicant?.course}
+                        </div>
+                      </td>
+                      <td>
+                        {isFaculty ? (
+                          <div>
+                            <span style={{ fontWeight: 600, color: '#1E293B', fontSize: '12.5px' }}>
+                              {a.applicant?.qualification || 'Post-Graduate'}
+                            </span>
+                            <div style={{ fontSize: '11px', color: '#64748B' }}>
+                              {a.applicant?.experience_years ? `${a.applicant.experience_years} yrs tenure` : (a.applicant?.designation || 'Faculty')}
+                            </div>
+                          </div>
+                        ) : (
+                          <span>{a.applicant?.cgpa ? `${a.applicant.cgpa} CGPA` : 'N/A'}</span>
+                        )}
+                      </td>
+                      <td>
+                        {a.match_score !== null && a.match_score !== undefined ? (
+                          <span style={{
+                            backgroundColor: a.match_score >= 70 ? '#DEF7EC' : a.match_score >= 40 ? '#FEF08A' : '#FEE2E2',
+                            color: a.match_score >= 70 ? '#166534' : a.match_score >= 40 ? '#854D0E' : '#991B1B',
+                            padding: '2px 8px',
+                            borderRadius: '4px',
+                            fontWeight: 700,
+                            fontSize: '12px'
+                          }}>
+                            {a.match_score}%
+                          </span>
+                        ) : '-'}
+                      </td>
+                      <td>
+                        {a.noc_document_url ? (
+                          <a
+                            href={getDocumentViewUrl(a.noc_document_url)}
+                            target="_blank"
+                            rel="noreferrer"
+                            style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '4px',
+                              padding: '2px 8px',
+                              borderRadius: '4px',
+                              backgroundColor: '#DCFCE7',
+                              color: '#15803D',
+                              fontSize: '11px',
+                              fontWeight: 700,
+                              textDecoration: 'none',
+                            }}
+                            title="Click to view uploaded institutional NOC"
+                          >
+                            <CheckCircle size={12} /> NOC Verified
+                          </a>
+                        ) : null}
+                      </td>
+                      <td>
+                        <span className={`badge ${
+                          a.status === 'selected' ? 'badge-success' :
+                          a.status === 'shortlisted' ? 'badge-info' :
+                          a.status === 'under_review' ? 'badge-warning' :
+                          a.status === 'rejected' ? 'badge-danger' : 'badge-neutral'
+                        }`}>
+                          {a.status}
                         </span>
-                      ) : '-'}
-                    </td>
-                    <td>
-                      <span className={`badge ${
-                        a.status === 'selected' ? 'badge-success' :
-                        a.status === 'shortlisted' ? 'badge-info' :
-                        a.status === 'under_review' ? 'badge-warning' :
-                        a.status === 'rejected' ? 'badge-danger' : 'badge-neutral'
-                      }`}>
-                        {a.status}
-                      </span>
-                    </td>
-                    <td>{new Date(a.applied_at).toLocaleDateString()}</td>
-                    <td>
-                      <button onClick={() => handleOpenReview(a)} className="btn btn-outline btn-sm">
-                        Evaluate
-                      </button>
-                    </td>
-                  </tr>
-                ))}
+                      </td>
+                      <td>{new Date(a.applied_at).toLocaleDateString()}</td>
+                      <td>
+                        <button onClick={() => handleOpenReview(a)} className="btn btn-outline btn-sm">
+                          Evaluate
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -233,15 +292,50 @@ export function IndustryApplicationsPage() {
               <button onClick={() => setSelectedApp(null)} className="btn btn-outline btn-sm">Close</button>
             </div>
 
-            <div style={{ backgroundColor: '#F8FAFC', padding: '12px', borderRadius: '4px', marginBottom: '16px', fontSize: '13px' }}>
-              <div style={{ fontWeight: 600, color: '#1E2A44', marginBottom: '4px' }}>Candidate Statement / Cover Note:</div>
+            <div style={{ backgroundColor: '#F8FAFC', padding: '14px', borderRadius: '8px', marginBottom: '16px', fontSize: '13px', border: '1px solid #E2E8F0' }}>
+              {selectedApp.applicant_role === 'faculty' && (
+                <div style={{ marginBottom: '12px', paddingBottom: '12px', borderBottom: '1px solid #E2E8F0' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                    <span style={{ fontWeight: 700, color: '#1E293B', fontSize: '14px' }}>
+                      {selectedApp.applicant?.full_name}
+                    </span>
+                    <span className="badge badge-info" style={{ fontSize: '11px' }}>Faculty Candidate</span>
+                  </div>
+                  <div style={{ color: '#475569', fontSize: '12.5px', marginBottom: '4px' }}>
+                    <strong>Designation & Institution:</strong> {selectedApp.applicant?.designation || 'Faculty'} • {selectedApp.applicant?.institution_name || 'Academic Institution'} ({selectedApp.applicant?.department_name || 'Engineering'})
+                  </div>
+                  <div style={{ color: '#475569', fontSize: '12.5px', marginBottom: '4px' }}>
+                    <strong>Qualification & Tenure:</strong> {selectedApp.applicant?.qualification || 'Post-Graduate'} • {selectedApp.applicant?.experience_years ? `${selectedApp.applicant.experience_years} years experience` : 'Academic tenure'}
+                  </div>
+                  {selectedApp.applicant?.research_areas && (
+                    <div style={{ color: '#475569', fontSize: '12.5px' }}>
+                      <strong>Research Interests:</strong> {selectedApp.applicant.research_areas}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              <div style={{ fontWeight: 600, color: '#1E2A44', marginBottom: '4px' }}>
+                {selectedApp.applicant_role === 'faculty' ? 'Statement of Academic Objectives & Purpose:' : 'Candidate Statement / Cover Note:'}
+              </div>
               <p style={{ color: '#475569', lineHeight: '1.5', fontStyle: 'italic', margin: 0 }}>
-                "{selectedApp.cover_note || 'No cover note submitted.'}"
+                "{selectedApp.cover_note || 'No statement submitted.'}"
               </p>
-              <div style={{ display: 'flex', gap: '10px', marginTop: '10px', alignItems: 'center' }}>
+              <div style={{ display: 'flex', gap: '10px', marginTop: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
                 {selectedApp.resume_url && (
                   <a href={getDocumentViewUrl(selectedApp.resume_url)} target="_blank" rel="noreferrer" className="btn btn-outline btn-sm">
-                    <FileText size={13} /> View Candidate Resume
+                    <FileText size={13} /> {selectedApp.applicant_role === 'faculty' ? 'View Faculty CV' : 'View Candidate Resume'}
+                  </a>
+                )}
+                {selectedApp.noc_document_url && (
+                  <a
+                    href={getDocumentViewUrl(selectedApp.noc_document_url)}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="btn btn-outline btn-sm"
+                    style={{ borderColor: '#16A34A', color: '#166534', backgroundColor: '#F0FDF4' }}
+                  >
+                    <CheckCircle size={13} /> View Verified Institutional NOC
                   </a>
                 )}
                 <button
@@ -252,7 +346,7 @@ export function IndustryApplicationsPage() {
                   style={{ display: 'flex', alignItems: 'center', gap: '6px', backgroundColor: '#3B5BDB' }}
                 >
                   {loadingAi ? <Loader2 size={13} className="animate-spin" /> : <Sparkles size={13} />}
-                  {loadingAi ? 'Analyzing Fit...' : 'Groq AI Fit Analysis'}
+                  {loadingAi ? 'Analyzing Fit...' : (selectedApp.applicant_role === 'faculty' ? 'Groq AI Faculty Fit Analysis' : 'Groq AI Fit Analysis')}
                 </button>
               </div>
             </div>

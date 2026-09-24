@@ -22,6 +22,9 @@ class LearningProgramBase(BaseModel):
     quiz_json: Optional[str] = None
     passing_score: float = 60.0
     auto_certify: bool = True
+    target_audience: str = "all"  # all, faculty, student
+    faculty_credits: float = 2.0  # FDP / CPE credits
+    delivery_format: str = "online"  # online, industrial_campus, hybrid
 
 
 class LearningProgramCreate(LearningProgramBase):
@@ -43,6 +46,9 @@ class LearningProgramUpdate(BaseModel):
     quiz_json: Optional[str] = None
     passing_score: Optional[float] = None
     auto_certify: Optional[bool] = None
+    target_audience: Optional[str] = None
+    faculty_credits: Optional[float] = None
+    delivery_format: Optional[str] = None
 
 
 class CertificateResponse(BaseModel):
@@ -59,6 +65,10 @@ class CertificateResponse(BaseModel):
     skills: Optional[str]
     verification_hash: str
     status: str
+    recipient_role: Optional[str] = "student"
+    credits: Optional[float] = None
+    designation: Optional[str] = None
+    institution_name: Optional[str] = None
 
     class Config:
         from_attributes = True
@@ -92,6 +102,8 @@ class StudentEnrollmentDetail(BaseModel):
     student_email: str
     student_department: Optional[str] = None
     student_institution: Optional[str] = None
+    participant_role: Optional[str] = "student"
+    participant_designation: Optional[str] = None
     enrolled_at: datetime
     status: str
     progress_percent: float
@@ -139,6 +151,26 @@ class SubmitQuizResponse(BaseModel):
     passed: bool
     passing_threshold: float
     attempts: int
+    certificate_issued: bool
+    certificate: Optional[CertificateResponse] = None
+    detailed_results: List[Dict[str, Any]]
+
+
+class SubmitModuleQuizRequest(BaseModel):
+    module_id: int
+    answers: Dict[str, int]  # { "1": 0, "2": 1 } question_id -> selected_option_index
+
+
+class SubmitModuleQuizResponse(BaseModel):
+    module_id: int
+    score_percent: float
+    passed: bool
+    passing_threshold: float
+    correct_count: int
+    total_questions: int
+    progress_percent: float
+    completed_modules: List[int]
+    all_completed: bool
     certificate_issued: bool
     certificate: Optional[CertificateResponse] = None
     detailed_results: List[Dict[str, Any]]
